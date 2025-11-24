@@ -1,0 +1,69 @@
+import rawSchema from "./dslSchema.json";
+
+export type StepFieldType = "text" | "number" | "boolean";
+
+export interface StepFieldDefinition {
+  name: string;
+  label: string;
+  type: StepFieldType;
+  placeholder?: string;
+  required?: boolean;
+}
+
+export interface StepDefinition {
+  label: string;
+  description: string;
+  fields: StepFieldDefinition[];
+}
+
+export type StepDefinitionMap = Record<string, StepDefinition>;
+
+export const DSL_SCHEMA = rawSchema as StepDefinitionMap;
+
+type FieldTypeMap = {
+  text: string;
+  number: number;
+  boolean: boolean;
+};
+
+type FieldDefinition<T extends keyof StepDefinitionMap> =
+  StepDefinitionMap[T]["fields"][number];
+
+type FieldValue<F> = F extends { type: infer FieldType }
+  ? FieldType extends keyof FieldTypeMap
+    ? FieldTypeMap[FieldType] | undefined
+    : unknown
+  : unknown;
+
+type BuildStep<T extends keyof StepDefinitionMap> = {
+  type: T;
+} & {
+  [F in FieldDefinition<T> as F["name"]]?: FieldValue<F>;
+};
+
+export type VisualDslStep = {
+  [K in keyof StepDefinitionMap]: BuildStep<K>;
+}[keyof StepDefinitionMap];
+
+export interface VisualDsl {
+  version: number;
+  steps: VisualDslStep[];
+  [key: string]: unknown;
+}
+
+export const STEP_TYPE_OPTIONS = Object.entries(DSL_SCHEMA).map(
+  ([value, config]) => ({
+    value,
+    label: config.label,
+    description: config.description,
+  }),
+);
+
+export const REQUIRED_FIELD_MAP: Record<string, string[]> = Object.fromEntries(
+  Object.entries(DSL_SCHEMA).map(([type, config]) => [
+    type,
+    config.fields
+      .filter((field) => Boolean(field.required))
+      .map((field) => field.name),
+  ]),
+);

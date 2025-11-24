@@ -1,0 +1,49 @@
+[tool.poetry]
+name = "nav-checkin-backend"
+version = "0.1.0"
+description = "Local-first automation hub for website navigation and daily check-ins."
+authors = ["AutoTool User <user@example.com>"]
+readme = "README.md"
+packages = [{ include = "app" }]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = "^0.115.0"
+uvicorn = { extras = ["standard"], version = "^0.30.0" }
+sqlmodel = "^0.0.22"
+sqlalchemy = "^2.0.32"
+alembic = "^1.13.2"
+pydantic-settings = "^2.4.0"
+python-multipart = "^0.0.9"
+passlib = { extras = ["bcrypt"], version = "^1.7.4" }
+pyjwt = "^2.10.1"
+apscheduler = "^3.10.4"
+httpx = "^0.27.2"
+playwright = "^1.47.0"
+aiofiles = "^24.1.0"
+email-validator = "^2.2.0"
+bcrypt = "==3.2.2"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.2"
+httpx = "^0.27.2"
+black = "^24.8.0"
+ruff = "^0.6.9"
+
+[build-system]
+requires = ["poetry-core>=1.8.1"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+select = ["E", "F", "I"]
+ignore = ["E501"]
+
+[tool.ruff.isort]
+known-first-party = ["app"]
+force-sort-within-sections = true

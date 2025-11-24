@@ -1,0 +1,12 @@
+INFO:     127.0.0.1:9385 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:9385 - "GET /assets/index-Dc52OT5-.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:13001 - "GET /assets/index-hYGwv6Fl.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:6091 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:6091 - "GET /assets/index-Dc52OT5-.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:4807 - "GET /assets/index-hYGwv6Fl.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:6091 - "GET /vite.svg HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:3746 - "POST /api/auth/token HTTP/1.1" 200 OK
+INFO:     127.0.0.1:3746 - "GET /api/auth/me HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:5644 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:5644 - "GET /assets/index-Dc52OT5-.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7263 - "GET /assets/index-hYGwv6Fl.css HTTP/1.1" 200 OK

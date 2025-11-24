@@ -1,0 +1,11 @@
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { Navigate, Route, Routes } from "react-router-dom";
+import AppLayout from "./components/AppLayout";
+import ProtectedRoute from "./components/ProtectedRoute";
+import DashboardPage from "./pages/Dashboard";
+import FlowsPage from "./pages/Flows";
+import HistoryPage from "./pages/History";
+import LoginPage from "./pages/Login";
+import SitesPage from "./pages/Sites";
+const App = () => (_jsxs(Routes, { children: [_jsx(Route, { path: "/login", element: _jsx(LoginPage, {}) }), _jsx(Route, { element: _jsx(ProtectedRoute, {}), children: _jsxs(Route, { element: _jsx(AppLayout, {}), children: [_jsx(Route, { index: true, element: _jsx(DashboardPage, {}) }), _jsx(Route, { path: "sites", element: _jsx(SitesPage, {}) }), _jsx(Route, { path: "flows", element: _jsx(FlowsPage, {}) }), _jsx(Route, { path: "history", element: _jsx(HistoryPage, {}) })] }) }), _jsx(Route, { path: "*", element: _jsx(Navigate, { to: "/", replace: true }) })] }));
+export default App;

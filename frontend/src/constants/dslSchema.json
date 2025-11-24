@@ -1,0 +1,90 @@
+{
+  "navigate": {
+    "label": "打开页面",
+    "description": "导航到指定 URL",
+    "fields": [
+      { "name": "url", "label": "URL", "type": "text", "placeholder": "https://example.com", "required": true },
+      { "name": "description", "label": "步骤说明", "type": "text", "placeholder": "可选：说明本步骤" }
+    ]
+  },
+  "click": {
+    "label": "点击元素",
+    "description": "点击页面上的元素",
+    "fields": [
+      { "name": "selector", "label": "选择器", "type": "text", "placeholder": "#button", "required": true },
+      { "name": "description", "label": "步骤说明", "type": "text", "placeholder": "可选：说明本步骤" }
+    ]
+  },
+  "input": {
+    "label": "输入文本",
+    "description": "向输入框填入内容",
+    "fields": [
+      { "name": "selector", "label": "选择器", "type": "text", "placeholder": "#username", "required": true },
+      { "name": "value", "label": "输入值", "type": "text", "placeholder": "要输入的内容", "required": true },
+      { "name": "description", "label": "步骤说明", "type": "text", "placeholder": "可选：说明本步骤" }
+    ]
+  },
+  "wait_for": {
+    "label": "等待元素",
+    "description": "等待元素出现",
+    "fields": [
+      { "name": "selector", "label": "选择器", "type": "text", "placeholder": "#element", "required": true },
+      { "name": "timeout", "label": "超时时间(毫秒)", "type": "number", "placeholder": "可选：默认 3000" },
+      { "name": "description", "label": "步骤说明", "type": "text", "placeholder": "可选：说明本步骤" }
+    ]
+  },
+  "wait_time": {
+    "label": "等待时间",
+    "description": "固定等待指定时间（毫秒）",
+    "fields": [
+      { "name": "duration", "label": "时长(毫秒)", "type": "number", "placeholder": "2000", "required": true },
+      { "name": "description", "label": "步骤说明", "type": "text", "placeholder": "可选：说明本步骤" }
+    ]
+  },
+  "extract": {
+    "label": "提取数据",
+    "description": "提取元素内容到变量",
+    "fields": [
+      { "name": "selector", "label": "选择器", "type": "text", "placeholder": "#points", "required": true },
+      { "name": "variable", "label": "变量名", "type": "text", "placeholder": "current_points", "required": true },
+      { "name": "description", "label": "步骤说明", "type": "text", "placeholder": "可选：说明本步骤" }
+    ]
+  },
+  "screenshot": {
+    "label": "截图",
+    "description": "保存当前页面截图",
+    "fields": [
+      { "name": "path", "label": "保存路径", "type": "text", "placeholder": "可选，默认自动命名" },
+      { "name": "full_page", "label": "全页模式", "type": "boolean" },
+      { "name": "description", "label": "步骤说明", "type": "text", "placeholder": "可选：说明本步骤" }
+    ]
+  },
+  "select": {
+    "label": "下拉选择",
+    "description": "选择下拉框选项",
+    "fields": [
+      { "name": "selector", "label": "选择器", "type": "text", "placeholder": "#city", "required": true },
+      { "name": "value", "label": "选项值", "type": "text", "placeholder": "shanghai", "required": true },
+      { "name": "description", "label": "步骤说明", "type": "text", "placeholder": "可选：说明本步骤" }
+    ]
+  },
+  "checkbox": {
+    "label": "复选框",
+    "description": "勾选或取消复选框",
+    "fields": [
+      { "name": "selector", "label": "选择器", "type": "text", "placeholder": "#agree", "required": true },
+      { "name": "checked", "label": "是否勾选", "type": "boolean", "required": true },
+      { "name": "description", "label": "步骤说明", "type": "text", "placeholder": "可选：说明本步骤" }
+    ]
+  },
+  "scroll": {
+    "label": "滚动页面",
+    "description": "滚动到指定位置或元素",
+    "fields": [
+      { "name": "selector", "label": "选择器", "type": "text", "placeholder": "可选：滚动到元素" },
+      { "name": "x", "label": "X 坐标", "type": "number", "placeholder": "横向滚动距离" },
+      { "name": "y", "label": "Y 坐标", "type": "number", "placeholder": "纵向滚动距离" },
+      { "name": "description", "label": "步骤说明", "type": "text", "placeholder": "可选：说明本步骤" }
+    ]
+  }
+}

@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>自动化测试页面 - 导航签到平台</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+        }
+
+        .section {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .section h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        input[type="text"],
+        input[type="email"],
+        input[type="password"],
+        input[type="number"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #5568d3;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .btn-success {
+            background: #48bb78;
+        }
+
+        .btn-success:hover {
+            background: #38a169;
+        }
+
+        .btn-danger {
+            background: #f56565;
+        }
+
+        .btn-danger:hover {
+            background: #e53e3e;
+        }
+
+        .checkbox-group,
+        .radio-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .checkbox-item,
+        .radio-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .result-box {
+            background: #f7fafc;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .result-box.show {
+            display: block;
+        }
+
+        .result-box.success {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+
+        .result-box.error {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .data-table th {
+            background: #f7fafc;
+            font-weight: 600;
+        }
+
+        .data-table tr:hover {
+            background: #f7fafc;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .badge-success {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+
+        .badge-warning {
+            background: #feebc8;
+            color: #7c2d12;
+        }
+
+        .hidden-element {
+            display: none;
+        }
+
+        .dynamic-content {
+            min-height: 50px;
+            padding: 15px;
+            background: #edf2f7;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+
+        #loading-spinner {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 自动化测试页面</h1>
+            <p>用于测试导航签到平台的自动化功能</p>
+        </div>
+
+        <!-- 登录表单 -->
+        <div class="section">
+            <h2>📝 登录表单测试</h2>
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="username">用户名</label>
+                    <input type="text" id="username" name="username" placeholder="请输入用户名">
+                </div>
+                <div class="form-group">
+                    <label for="password">密码</label>
+                    <input type="password" id="password" name="password" placeholder="请输入密码">
+                </div>
+                <div class="checkbox-group">
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="remember" name="remember">
+                        <label for="remember" style="margin: 0;">记住我</label>
+                    </div>
+                </div>
+                <button type="submit" id="login-btn">登录</button>
+            </form>
+            <div id="login-result" class="result-box"></div>
+        </div>
+
+        <!-- 签到功能 -->
+        <div class="section">
+            <h2>✅ 签到功能测试</h2>
+            <div>
+                <p>今日签到状态: <span id="checkin-status" class="badge badge-warning">未签到</span></p>
+                <p>连续签到天数: <span id="checkin-days">0</span> 天</p>
+                <p>累计积分: <span id="total-points">0</span> 分</p>
+            </div>
+            <button id="checkin-btn" class="btn-success" style="margin-top: 15px;">立即签到</button>
+            <div id="checkin-result" class="result-box"></div>
+        </div>
+
+        <div class="grid">
+            <!-- 表单元素测试 -->
+            <div class="section">
+                <h2>📋 表单元素</h2>
+                <div class="form-group">
+                    <label for="email">邮箱</label>
+                    <input type="email" id="email" placeholder="example@email.com">
+                </div>
+                <div class="form-group">
+                    <label for="age">年龄</label>
+                    <input type="number" id="age" min="1" max="120">
+                </div>
+                <div class="form-group">
+                    <label for="city">城市</label>
+                    <select id="city">
+                        <option value="">请选择</option>
+                        <option value="beijing">北京</option>
+                        <option value="shanghai">上海</option>
+                        <option value="guangzhou">广州</option>
+                        <option value="shenzhen">深圳</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>兴趣爱好</label>
+                    <div class="checkbox-group">
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="hobby-reading" value="reading">
+                            <label for="hobby-reading" style="margin: 0;">阅读</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="hobby-sports" value="sports">
+                            <label for="hobby-sports" style="margin: 0;">运动</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="hobby-music" value="music">
+                            <label for="hobby-music" style="margin: 0;">音乐</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 动态内容测试 -->
+            <div class="section">
+                <h2>⚡ 动态内容</h2>
+                <button id="load-data-btn">加载数据</button>
+                <div id="loading-spinner">
+                    <div class="spinner"></div>
+                    <p>加载中...</p>
+                </div>
+                <div id="dynamic-content" class="dynamic-content">
+                    点击按钮加载内容
+                </div>
+                <button id="show-hidden-btn" style="margin-top: 10px;">显示隐藏元素</button>
+                <div id="hidden-element" class="hidden-element" style="margin-top: 10px; padding: 10px; background: #fef5e7; border-radius: 5px;">
+                    🎉 这是一个隐藏的元素！
+                </div>
+            </div>
+        </div>
+
+        <!-- 数据提取测试 -->
+        <div class="section">
+            <h2>📊 数据提取测试</h2>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>日期</th>
+                        <th>操作</th>
+                        <th>积分</th>
+                        <th>状态</th>
+                    </tr>
+                </thead>
+                <tbody id="history-table">
+                    <tr>
+                        <td>2024-01-15</td>
+                        <td>每日签到</td>
+                        <td class="points">+10</td>
+                        <td><span class="badge badge-success">成功</span></td>
+                    </tr>
+                    <tr>
+                        <td>2024-01-14</td>
+                        <td>每日签到</td>
+                        <td class="points">+10</td>
+                        <td><span class="badge badge-success">成功</span></td>
+                    </tr>
+                    <tr>
+                        <td>2024-01-13</td>
+                        <td>每日签到</td>
+                        <td class="points">+10</td>
+                        <td><span class="badge badge-success">成功</span></td>
+                    </tr>
+                </tbody>
+            </table>
+            <div style="margin-top: 15px;">
+                <strong>总积分:</strong> <span id="extracted-total">30</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 登录表单处理
+        document.getElementById('login-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const resultBox = document.getElementById('login-result');
+
+            if (username === 'admin' && password === '123456') {
+                resultBox.className = 'result-box success show';
+                resultBox.textContent = '✅ 登录成功！欢迎回来，' + username;
+            } else {
+                resultBox.className = 'result-box error show';
+                resultBox.textContent = '❌ 登录失败，用户名或密码错误';
+            }
+        });
+
+        // 签到功能
+        let checkedIn = false;
+        let checkinDays = 0;
+        let totalPoints = 0;
+
+        document.getElementById('checkin-btn').addEventListener('click', function() {
+            if (checkedIn) {
+                const resultBox = document.getElementById('checkin-result');
+                resultBox.className = 'result-box error show';
+                resultBox.textContent = '❌ 今日已签到，请明天再来';
+                return;
+            }
+
+            checkedIn = true;
+            checkinDays++;
+            const points = Math.floor(Math.random() * 10) + 5;
+            totalPoints += points;
+
+            document.getElementById('checkin-status').className = 'badge badge-success';
+            document.getElementById('checkin-status').textContent = '已签到';
+            document.getElementById('checkin-days').textContent = checkinDays;
+            document.getElementById('total-points').textContent = totalPoints;
+
+            const resultBox = document.getElementById('checkin-result');
+            resultBox.className = 'result-box success show';
+            resultBox.textContent = `🎉 签到成功！获得 ${points} 积分`;
+
+            this.disabled = true;
+            this.textContent = '今日已签到';
+        });
+
+        // 加载动态数据
+        document.getElementById('load-data-btn').addEventListener('click', function() {
+            const spinner = document.getElementById('loading-spinner');
+            const content = document.getElementById('dynamic-content');
+
+            spinner.style.display = 'block';
+            content.textContent = '';
+
+            setTimeout(function() {
+                spinner.style.display = 'none';
+                content.innerHTML = `
+                    <h3>动态加载的内容</h3>
+                    <p>加载时间: ${new Date().toLocaleTimeString()}</p>
+                    <p class="dynamic-data">这是通过 AJAX 加载的数据</p>
+                `;
+            }, 2000);
+        });
+
+        // 显示隐藏元素
+        document.getElementById('show-hidden-btn').addEventListener('click', function() {
+            const hiddenElement = document.getElementById('hidden-element');
+            if (hiddenElement.classList.contains('hidden-element')) {
+                hiddenElement.classList.remove('hidden-element');
+                this.textContent = '隐藏元素';
+            } else {
+                hiddenElement.classList.add('hidden-element');
+                this.textContent = '显示隐藏元素';
+            }
+        });
+    </script>
+</body>
+</html>

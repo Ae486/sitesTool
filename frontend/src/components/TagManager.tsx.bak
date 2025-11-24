@@ -1,0 +1,148 @@
+﻿import { PlusOutlined } from "@ant-design/icons";
+import { Button, Divider, Input, Space, Tag, Typography, message } from "antd";
+import { useState } from "react";
+import type { Tag as TagType } from "../types/site";
+
+interface TagManagerProps {
+  value?: number[];
+  onChange?: (ids: number[]) => void;
+  availableTags: TagType[];
+  onCreateTag: (tag: { name: string; color: string }) => Promise<TagType | void>;
+  creating?: boolean;
+}
+
+const colorPairs = [
+  { bg: "#E0F7FA", text: "#006064" },
+  { bg: "#F1F8E9", text: "#33691E" },
+  { bg: "#FFF8E1", text: "#F57F17" },
+  { bg: "#F3E5F5", text: "#4A148C" },
+  { bg: "#E8EAF6", text: "#1A237E" },
+  { bg: "#FBE9E7", text: "#BF360C" },
+  { bg: "#EDE7F6", text: "#311B92" },
+  { bg: "#E1F5FE", text: "#01579B" },
+];
+
+const randomColor = () => {
+  const pair = colorPairs[Math.floor(Math.random() * colorPairs.length)];
+  return pair.bg;
+};
+
+const getTextColor = (bgColor?: string | null) => {
+  if (!bgColor) return "#262626";
+  const pair = colorPairs.find((pair) => pair.bg === bgColor);
+  return pair ? pair.text : "#262626";
+};
+
+const TagManager = ({
+  value = [],
+  onChange,
+  availableTags,
+  onCreateTag,
+  creating,
+}: TagManagerProps) => {
+  const [newTagName, setNewTagName] = useState("");
+
+  const selectedTags = availableTags.filter((tag) => value.includes(tag.id));
+  const unselectedTags = availableTags.filter((tag) => !value.includes(tag.id));
+
+  const handleSelect = (tagId: number) => {
+    if (value.includes(tagId)) {
+      onChange?.(value.filter((id) => id !== tagId));
+    } else {
+      onChange?.([...value, tagId]);
+    }
+  };
+
+  const handleCreate = async () => {
+    const name = newTagName.trim();
+    if (!name) {
+      message.warning("请输入标签名称");
+      return;
+    }
+    try {
+      const color = randomColor();
+      const result = await onCreateTag({ name, color });
+      if (result) {
+        onChange?.([...value, result.id]);
+        setNewTagName("");
+        message.success(标签「」已创建);
+      }
+    } catch (error: any) {
+      message.error(创建标签失败: );
+    }
+  };
+
+  return (
+    <Space direction="vertical" style={{ width: "100%" }} size="small">
+      <Typography.Text type="secondary">已选标签</Typography.Text>
+      <Space size={[8, 8]} wrap>
+        {selectedTags.length > 0 ? (
+          selectedTags.map((tag) => (
+            <Tag
+              key={tag.id}
+              style={{
+                backgroundColor: tag.color || randomColor(),
+                color: getTextColor(tag.color || randomColor()),
+                border: "none",
+              }}
+              closable
+              onClose={(e) => {
+                e.preventDefault();
+                handleSelect(tag.id);
+              }}
+            >
+              {tag.name}
+            </Tag>
+          ))
+        ) : (
+          <Typography.Text type="secondary">暂无标签</Typography.Text>
+        )}
+      </Space>
+
+      <Divider style={{ margin: "8px 0" }} />
+
+      <Typography.Text type="secondary">标签库</Typography.Text>
+      <Space size={[8, 8]} wrap>
+        {unselectedTags.length > 0 ? (
+          unselectedTags.map((tag) => (
+            <Tag
+              key={tag.id}
+              style={{
+                backgroundColor: tag.color || "#f0f0f0",
+                color: getTextColor(tag.color),
+                border: "none",
+                cursor: "pointer",
+              }}
+              onClick={() => handleSelect(tag.id)}
+            >
+              {tag.name}
+            </Tag>
+          ))
+        ) : (
+          <Typography.Text type="secondary">没有可选标签</Typography.Text>
+        )}
+      </Space>
+
+      <Divider style={{ margin: "8px 0" }} />
+
+      <Space.Compact style={{ width: "100%" }}>
+        <Input
+          placeholder="新建标签"
+          value={newTagName}
+          onChange={(e) => setNewTagName(e.target.value)}
+        />
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={handleCreate}
+          loading={creating}
+        >
+          添加
+        </Button>
+      </Space.Compact>
+    </Space>
+  );
+};
+
+export default TagManager;
+

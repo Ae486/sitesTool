@@ -1,0 +1,148 @@
+@import "antd/dist/reset.css";
+
+:root {
+  /* Minimalist Black & White Palette */
+  --primary-color: #18181b;
+  /* Zinc 900 */
+  --primary-hover: #27272a;
+  /* Zinc 800 */
+  --secondary-color: #71717a;
+  /* Zinc 500 */
+  --success-color: #10b981;
+  /* Emerald 500 - Keep for status */
+  --warning-color: #f59e0b;
+  /* Amber 500 - Keep for status */
+  --error-color: #ef4444;
+  /* Red 500 - Keep for status */
+
+  /* Backgrounds */
+  --bg-body: #fafafa;
+  /* Zinc 50 */
+  --bg-card: rgba(255, 255, 255, 0.9);
+  --bg-glass: rgba(255, 255, 255, 0.8);
+  --bg-sidebar: #000000;
+  /* Pure Black */
+
+  /* Text */
+  --text-primary: #09090b;
+  /* Zinc 950 */
+  --text-secondary: #52525b;
+  /* Zinc 600 */
+
+  /* Effects */
+  --glass-blur: blur(12px);
+  --glass-border: 1px solid rgba(0, 0, 0, 0.06);
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+
+  /* Transitions */
+  --transition-base: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+body,
+#root {
+  margin: 0;
+  min-height: 100vh;
+}
+
+body {
+  font-family: "Inter", "PingFang SC", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background-color: var(--bg-body);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Glassmorphism Utilities */
+.glass-panel {
+  background: var(--bg-glass);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--glass-border);
+  box-shadow: var(--shadow-md);
+}
+
+.glass-card {
+  background: var(--bg-card);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition-base);
+}
+
+.glass-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Animation Utilities */
+.fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Ant Design Overrides for Modern Look */
+.ant-layout {
+  background: transparent !important;
+}
+
+.ant-menu-dark {
+  background: transparent !important;
+}
+
+.ant-card {
+  border-radius: 16px !important;
+  overflow: hidden;
+}
+
+.ant-btn {
+  border-radius: 8px !important;
+  box-shadow: none !important;
+}
+
+.ant-btn-primary {
+  background-color: var(--primary-color) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+.ant-btn-primary:hover {
+  background-color: var(--primary-hover) !important;
+  transform: translateY(-1px);
+}
+
+.ant-table-wrapper .ant-table-container {
+  border-radius: 12px !important;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
