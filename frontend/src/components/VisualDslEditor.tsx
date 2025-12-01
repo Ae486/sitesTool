@@ -23,6 +23,7 @@ import {
   Form,
   Input,
   InputNumber,
+  message,
   Select,
   Space,
   Switch,
@@ -30,9 +31,9 @@ import {
   Typography,
 } from "antd";
 import { useDebounceFn } from "ahooks";
-import { AnimatePresence, motion } from "framer-motion";
-import { forwardRef, memo, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
-import { DSL_SCHEMA, STEP_TYPE_OPTIONS } from "../constants/dsl";
+import { AnimatePresence } from "framer-motion";
+import { forwardRef, memo, useCallback, useEffect, useImperativeHandle, useMemo, useState } from "react";
+import { DSL_SCHEMA, STEP_TYPE_OPTIONS, isContainerType } from "../constants/dsl";
 import type { FlowDSL, FlowStep } from "../types/flow";
 import { DslValidationResult, validateDslStructure } from "../utils/dsl";
 
@@ -40,8 +41,15 @@ const { Text } = Typography;
 
 type StepKey = keyof typeof DSL_SCHEMA;
 
-// Augment FlowStep with a local ID for dnd-kit
-type SortableFlowStep = FlowStep & { _id: string;[key: string]: any };
+// Internal step type with ID for drag-and-drop
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+interface SortableFlowStep {
+  _id: string;
+  type: string;
+  children?: SortableFlowStep[];
+  else_children?: SortableFlowStep[];
+  [key: string]: any; // Allow any field from DSL schema
+}
 
 export interface VisualDslEditorRef {
   flush: () => void;
@@ -87,14 +95,45 @@ const generateId = () => {
   return Math.random().toString(36).substring(2, 15);
 };
 
+// Recursively add IDs to a step and its children
+const addIdsToStep = (step: FlowStep | SortableFlowStep): SortableFlowStep => {
+  const { _id, children, else_children, ...rest } = step as SortableFlowStep;
+  const result: SortableFlowStep = {
+    ...rest,
+    type: step.type,
+    _id: _id || generateId(),
+  };
+  if (children && children.length > 0) {
+    result.children = children.map(addIdsToStep);
+  } else if ((step as FlowStep).children) {
+    result.children = (step as FlowStep).children!.map(addIdsToStep);
+  }
+  if (else_children && else_children.length > 0) {
+    result.else_children = else_children.map(addIdsToStep);
+  } else if ((step as FlowStep).else_children) {
+    result.else_children = (step as FlowStep).else_children!.map(addIdsToStep);
+  }
+  return result;
+};
+
+// Recursively strip IDs from a step and its children
+const stripIdsFromStep = (step: SortableFlowStep): FlowStep => {
+  const { _id, children, else_children, ...rest } = step;
+  const result: FlowStep = { ...rest } as FlowStep;
+  if (children && children.length > 0) {
+    result.children = children.map(stripIdsFromStep);
+  }
+  if (else_children && else_children.length > 0) {
+    result.else_children = else_children.map(stripIdsFromStep);
+  }
+  return result;
+};
+
 // Helper to ensure every step has a unique ID for sorting
 const ensureDslWithIds = (dsl: FlowDSL): { version: number; steps: SortableFlowStep[] } => {
   return {
     ...dsl,
-    steps: dsl.steps.map((step) => ({
-      ...step,
-      _id: (step as any)._id || generateId(),
-    })),
+    steps: dsl.steps.map(addIdsToStep),
   };
 };
 
@@ -162,6 +201,23 @@ const StepField = memo(
       );
     }
 
+    if (fieldMeta.type === "select" && fieldMeta.options) {
+      return (
+        <Form.Item {...commonProps}>
+          <Select
+            style={{ width: "100%" }}
+            placeholder={fieldMeta.placeholder}
+            value={value || undefined}
+            onChange={(val) => onFieldChange(stepIndex, fieldMeta.name, val)}
+            options={fieldMeta.options.map((opt: { value: string; label: string }) => ({
+              value: opt.value,
+              label: opt.label,
+            }))}
+          />
+        </Form.Item>
+      );
+    }
+
     return (
       <Form.Item {...commonProps}>
         <Input
@@ -174,26 +230,276 @@ const StepField = memo(
   },
 );
 
+// Container color schemes for visual distinction
+const CONTAINER_COLORS: Record<string, { border: string; bg: string; headerBg: string }> = {
+  loop: { border: "#722ed1", bg: "#f9f0ff", headerBg: "#efdbff" },
+  loop_array: { border: "#13c2c2", bg: "#e6fffb", headerBg: "#b5f5ec" },
+  if_else: { border: "#fa8c16", bg: "#fff7e6", headerBg: "#ffd591" },
+};
+
+// Maximum nesting depth constant
+const MAX_NESTING_DEPTH = 4;
+
+// Nested step card (non-draggable, used inside containers) - supports recursive nesting
+const NestedStepCard = memo(
+  ({
+    step,
+    index,
+    depth,
+    onDelete,
+    onDuplicate,
+    onTypeChange,
+    onFieldChange,
+    onChildrenChange,
+  }: {
+    step: SortableFlowStep;
+    index: number;
+    depth: number;
+    onDelete: () => void;
+    onDuplicate: () => void;
+    onTypeChange: (type: StepKey) => void;
+    onFieldChange: (field: string, value: unknown) => void;
+    onChildrenChange?: (children: SortableFlowStep[], branch?: "else") => void;
+  }) => {
+    const definition = DSL_SCHEMA[step.type as StepKey];
+    const isContainer = isContainerType(step.type);
+    const colors = CONTAINER_COLORS[step.type];
+
+    // Filter out container types when at max depth
+    const allowedOptions = depth >= MAX_NESTING_DEPTH 
+      ? STEP_TYPE_OPTIONS.filter(opt => !isContainerType(opt.value))
+      : STEP_TYPE_OPTIONS;
+
+    // Handlers for nested children (recursive)
+    const handleAddChild = (branch?: "else") => {
+      // Block adding at depth 5 (would be depth 4 children)
+      if (depth >= MAX_NESTING_DEPTH) {
+        message.warning("已达到最大嵌套层数（4层），无法继续添加嵌套步骤");
+        return;
+      }
+      const newStep = createEmptyStep("click");
+      const targetChildren = branch === "else" ? (step.else_children || []) : (step.children || []);
+      onChildrenChange?.([...targetChildren, newStep], branch);
+    };
+
+    const handleChildDelete = (childIndex: number, branch?: "else") => {
+      const targetChildren = branch === "else" ? (step.else_children || []) : (step.children || []);
+      onChildrenChange?.(targetChildren.filter((_, i) => i !== childIndex), branch);
+    };
+
+    const handleChildDuplicate = (childIndex: number, branch?: "else") => {
+      const targetChildren = branch === "else" ? (step.else_children || []) : (step.children || []);
+      const clone = { ...targetChildren[childIndex], _id: generateId() };
+      const newChildren = [...targetChildren];
+      newChildren.splice(childIndex + 1, 0, clone);
+      onChildrenChange?.(newChildren, branch);
+    };
+
+    const handleChildTypeChange = (childIndex: number, type: StepKey, branch?: "else") => {
+      const targetChildren = branch === "else" ? (step.else_children || []) : (step.children || []);
+      const newChildren = [...targetChildren];
+      const newStep = createEmptyStep(type);
+      newStep._id = newChildren[childIndex]._id;
+      newChildren[childIndex] = newStep;
+      onChildrenChange?.(newChildren, branch);
+    };
+
+    const handleChildFieldChange = (childIndex: number, field: string, value: unknown, branch?: "else") => {
+      const targetChildren = branch === "else" ? (step.else_children || []) : (step.children || []);
+      const newChildren = [...targetChildren];
+      newChildren[childIndex] = { ...newChildren[childIndex], [field]: value };
+      onChildrenChange?.(newChildren, branch);
+    };
+
+    const handleNestedChildrenChange = (childIndex: number, grandChildren: SortableFlowStep[], branch?: "else", grandBranch?: "else") => {
+      const targetChildren = branch === "else" ? (step.else_children || []) : (step.children || []);
+      const newChildren = [...targetChildren];
+      if (grandBranch === "else") {
+        newChildren[childIndex] = { ...newChildren[childIndex], else_children: grandChildren };
+      } else {
+        newChildren[childIndex] = { ...newChildren[childIndex], children: grandChildren };
+      }
+      onChildrenChange?.(newChildren, branch);
+    };
+
+    // Render nested children recursively
+    const renderNestedChildren = (children: SortableFlowStep[] | undefined, branch?: "else") => (
+      <div style={{ 
+        marginLeft: 12, 
+        paddingLeft: 10, 
+        borderLeft: `2px dashed ${colors?.border || "#d9d9d9"}`,
+      }}>
+        {children && children.length > 0 ? (
+          children.map((child, childIdx) => (
+            <NestedStepCard
+              key={child._id}
+              step={child}
+              index={childIdx}
+              depth={depth + 1}
+              onDelete={() => handleChildDelete(childIdx, branch)}
+              onDuplicate={() => handleChildDuplicate(childIdx, branch)}
+              onTypeChange={(type) => handleChildTypeChange(childIdx, type, branch)}
+              onFieldChange={(field, val) => handleChildFieldChange(childIdx, field, val, branch)}
+              onChildrenChange={(grandChildren, grandBranch) => 
+                handleNestedChildrenChange(childIdx, grandChildren, branch, grandBranch)
+              }
+            />
+          ))
+        ) : (
+          <Text type="secondary" style={{ fontSize: 11 }}>暂无步骤</Text>
+        )}
+        {depth < MAX_NESTING_DEPTH && (
+          <Button
+            type="dashed"
+            size="small"
+            icon={<PlusOutlined />}
+            onClick={() => handleAddChild(branch)}
+            style={{ marginTop: 6, width: "100%", fontSize: 12 }}
+          >
+            添加{branch === "else" ? "否则" : ""}步骤
+          </Button>
+        )}
+        {depth >= MAX_NESTING_DEPTH && (
+          <Text type="warning" style={{ fontSize: 10, display: "block", marginTop: 4 }}>
+            已达最大嵌套层数
+          </Text>
+        )}
+      </div>
+    );
+
+    return (
+      <Card
+        size="small"
+        style={{
+          borderRadius: 8,
+          marginBottom: 8,
+          borderLeft: isContainer ? `3px solid ${colors?.border || "#1890ff"}` : undefined,
+          background: isContainer ? colors?.bg : undefined,
+        }}
+        title={
+          <Space size="small" align="center">
+            <Text strong style={{ fontSize: 12 }}>#{index + 1}</Text>
+            <Tooltip title={definition?.description} placement="top">
+              <Select
+                value={step.type}
+                bordered={false}
+                size="small"
+                style={{ width: 140 }}
+                onChange={(nextType) => onTypeChange(nextType as StepKey)}
+                options={allowedOptions}
+              />
+            </Tooltip>
+          </Space>
+        }
+        extra={
+          <Space size="small">
+            <Tooltip title="复制">
+              <Button icon={<CopyOutlined />} size="small" onClick={onDuplicate} />
+            </Tooltip>
+            <Tooltip title="删除">
+              <Button icon={<DeleteOutlined />} size="small" danger onClick={onDelete} />
+            </Tooltip>
+          </Space>
+        }
+      >
+        <Space direction="vertical" style={{ width: "100%" }} size="small">
+          {definition.fields.map((field) => (
+            <Form.Item
+              key={field.name}
+              label={field.label}
+              required={field.required}
+              style={{ marginBottom: 8 }}
+            >
+              {field.type === "boolean" ? (
+                <Switch
+                  size="small"
+                  checked={Boolean(step[field.name])}
+                  onChange={(checked) => onFieldChange(field.name, checked)}
+                />
+              ) : field.type === "number" ? (
+                <InputNumber
+                  size="small"
+                  style={{ width: "100%" }}
+                  placeholder={field.placeholder}
+                  value={step[field.name]}
+                  onChange={(val) => onFieldChange(field.name, val)}
+                />
+              ) : field.type === "select" && field.options ? (
+                <Select
+                  size="small"
+                  style={{ width: "100%" }}
+                  placeholder={field.placeholder}
+                  value={step[field.name] || undefined}
+                  onChange={(val) => onFieldChange(field.name, val)}
+                  options={field.options.map((opt: { value: string; label: string }) => ({
+                    value: opt.value,
+                    label: opt.label,
+                  }))}
+                />
+              ) : (
+                <Input
+                  size="small"
+                  placeholder={field.placeholder}
+                  value={step[field.name] || ""}
+                  onChange={(e) => onFieldChange(field.name, e.target.value)}
+                />
+              )}
+            </Form.Item>
+          ))}
+        </Space>
+
+        {/* Container children - recursive rendering */}
+        {isContainer && (
+          <div style={{ marginTop: 12 }}>
+            <Text strong style={{ fontSize: 11, color: colors?.border }}>
+              {definition.containerLabel || "子步骤"}
+            </Text>
+            {renderNestedChildren(step.children)}
+
+            {/* Else branch for if_else */}
+            {definition.hasElse && (
+              <div style={{ marginTop: 12 }}>
+                <Text strong style={{ fontSize: 11, color: "#fa541c" }}>
+                  {definition.elseLabel || "否则执行"}
+                </Text>
+                {renderNestedChildren(step.else_children, "else")}
+              </div>
+            )}
+          </div>
+        )}
+      </Card>
+    );
+  }
+);
+
 // Sortable Step Item Component
 const SortableStepItem = memo(
   ({
     step,
     index,
+    depth = 0,
     onDelete,
     onDuplicate,
     onTypeChange,
     onFieldChange,
+    onChildrenChange,
   }: {
     step: SortableFlowStep;
     index: number;
+    depth?: number;
     onDelete: (index: number) => void;
     onDuplicate: (index: number) => void;
     onTypeChange: (index: number, type: StepKey) => void;
     onFieldChange: (index: number, field: string, value: unknown) => void;
+    onChildrenChange?: (index: number, children: SortableFlowStep[], branch?: "else") => void;
   }) => {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
       id: step._id,
     });
+
+    const isContainer = isContainerType(step.type);
+    const definition = DSL_SCHEMA[step.type as StepKey];
+    const colors = CONTAINER_COLORS[step.type];
 
     const style = {
       transform: CSS.Transform.toString(transform),
@@ -204,7 +510,91 @@ const SortableStepItem = memo(
       zIndex: isDragging ? 999 : 1,
     };
 
-    const definition = DSL_SCHEMA[step.type as StepKey];
+    // Handlers for nested children
+    const handleAddChild = (branch?: "else") => {
+      const newStep = createEmptyStep("click");
+      const targetChildren = branch === "else" ? (step.else_children || []) : (step.children || []);
+      onChildrenChange?.(index, [...targetChildren, newStep], branch);
+    };
+
+    const handleChildDelete = (childIndex: number, branch?: "else") => {
+      const targetChildren = branch === "else" ? (step.else_children || []) : (step.children || []);
+      onChildrenChange?.(index, targetChildren.filter((_, i) => i !== childIndex), branch);
+    };
+
+    const handleChildDuplicate = (childIndex: number, branch?: "else") => {
+      const targetChildren = branch === "else" ? (step.else_children || []) : (step.children || []);
+      const clone = { ...targetChildren[childIndex], _id: generateId() };
+      const newChildren = [...targetChildren];
+      newChildren.splice(childIndex + 1, 0, clone);
+      onChildrenChange?.(index, newChildren, branch);
+    };
+
+    const handleChildTypeChange = (childIndex: number, type: StepKey, branch?: "else") => {
+      const targetChildren = branch === "else" ? (step.else_children || []) : (step.children || []);
+      const newChildren = [...targetChildren];
+      const newStep = createEmptyStep(type);
+      newStep._id = newChildren[childIndex]._id;
+      newChildren[childIndex] = newStep;
+      onChildrenChange?.(index, newChildren, branch);
+    };
+
+    const handleChildFieldChange = (childIndex: number, field: string, value: unknown, branch?: "else") => {
+      const targetChildren = branch === "else" ? (step.else_children || []) : (step.children || []);
+      const newChildren = [...targetChildren];
+      newChildren[childIndex] = { ...newChildren[childIndex], [field]: value };
+      onChildrenChange?.(index, newChildren, branch);
+    };
+
+    // Handle nested grandchildren changes (for recursive nesting)
+    const handleNestedChildrenChange = (childIndex: number, grandChildren: SortableFlowStep[], branch?: "else", grandBranch?: "else") => {
+      const targetChildren = branch === "else" ? (step.else_children || []) : (step.children || []);
+      const newChildren = [...targetChildren];
+      if (grandBranch === "else") {
+        newChildren[childIndex] = { ...newChildren[childIndex], else_children: grandChildren };
+      } else {
+        newChildren[childIndex] = { ...newChildren[childIndex], children: grandChildren };
+      }
+      onChildrenChange?.(index, newChildren, branch);
+    };
+
+    // Render nested children with recursive support
+    const renderChildren = (children: SortableFlowStep[] | undefined, branch?: "else") => (
+      <div style={{ 
+        marginLeft: 16, 
+        paddingLeft: 12, 
+        borderLeft: `2px dashed ${colors?.border || "#d9d9d9"}`,
+      }}>
+        {children && children.length > 0 ? (
+          children.map((child, childIdx) => (
+            <NestedStepCard
+              key={child._id}
+              step={child}
+              index={childIdx}
+              depth={depth + 1}
+              onDelete={() => handleChildDelete(childIdx, branch)}
+              onDuplicate={() => handleChildDuplicate(childIdx, branch)}
+              onTypeChange={(type) => handleChildTypeChange(childIdx, type, branch)}
+              onFieldChange={(field, val) => handleChildFieldChange(childIdx, field, val, branch)}
+              onChildrenChange={(grandChildren, grandBranch) => 
+                handleNestedChildrenChange(childIdx, grandChildren, branch, grandBranch)
+              }
+            />
+          ))
+        ) : (
+          <Text type="secondary" style={{ fontSize: 12 }}>暂无步骤</Text>
+        )}
+        <Button
+          type="dashed"
+          size="small"
+          icon={<PlusOutlined />}
+          onClick={() => handleAddChild(branch)}
+          style={{ marginTop: 8, width: "100%" }}
+        >
+          添加{branch === "else" ? "否则" : ""}步骤
+        </Button>
+      </div>
+    );
 
     return (
       <div ref={setNodeRef} style={style}>
@@ -216,6 +606,8 @@ const SortableStepItem = memo(
               ? "0 8px 24px rgba(0,0,0,0.15)"
               : "0 1px 4px rgba(15, 23, 42, 0.08)",
             border: isDragging ? "1px solid var(--primary-color)" : undefined,
+            borderLeft: isContainer ? `4px solid ${colors?.border}` : undefined,
+            background: isContainer ? colors?.bg : undefined,
           }}
           title={
             <Space size="small" align="center">
@@ -229,14 +621,16 @@ const SortableStepItem = memo(
                 </div>
               </Tooltip>
               <Text strong>步骤 {index + 1}</Text>
-              <Select
-                value={step.type as string}
-                bordered={false}
-                style={{ width: 160 }}
-                onChange={(nextType) => onTypeChange(index, nextType as StepKey)}
-                options={STEP_TYPE_OPTIONS}
-                onMouseDown={(e) => e.stopPropagation()} // Prevent drag start
-              />
+              <Tooltip title={definition?.description} placement="top">
+                <Select
+                  value={step.type as string}
+                  bordered={false}
+                  style={{ width: 160 }}
+                  onChange={(nextType) => onTypeChange(index, nextType as StepKey)}
+                  options={STEP_TYPE_OPTIONS}
+                  onMouseDown={(e) => e.stopPropagation()}
+                />
+              </Tooltip>
             </Space>
           }
           extra={
@@ -259,6 +653,7 @@ const SortableStepItem = memo(
             </Space>
           }
         >
+          {/* Step fields */}
           <Space direction="vertical" style={{ width: "100%" }} size="small">
             {definition.fields.map((field) => (
               <StepField
@@ -270,6 +665,26 @@ const SortableStepItem = memo(
               />
             ))}
           </Space>
+
+          {/* Container children */}
+          {isContainer && (
+            <div style={{ marginTop: 16 }}>
+              <Text strong style={{ fontSize: 12, color: colors?.border }}>
+                {definition.containerLabel || "子步骤"}
+              </Text>
+              {renderChildren(step.children)}
+
+              {/* Else branch for if_else */}
+              {definition.hasElse && (
+                <div style={{ marginTop: 16 }}>
+                  <Text strong style={{ fontSize: 12, color: "#fa541c" }}>
+                    {definition.elseLabel || "否则执行"}
+                  </Text>
+                  {renderChildren(step.else_children, "else")}
+                </div>
+              )}
+            </div>
+          )}
         </Card>
       </div>
     );
@@ -334,7 +749,7 @@ const VisualDslEditor = forwardRef<VisualDslEditorRef, VisualDslEditorProps>(
       // Create a clean version of current state without IDs for comparison
       const currentClean = {
         ...prev,
-        steps: prev.steps.map(({ _id, ...rest }) => rest),
+        steps: prev.steps.map(stripIdsFromStep),
       };
 
       // Deep comparison (simple JSON stringify is sufficient for this DSL)
@@ -342,17 +757,16 @@ const VisualDslEditor = forwardRef<VisualDslEditorRef, VisualDslEditorProps>(
         return prev;
       }
 
-      // If different, we need to update.
-      // Try to preserve IDs if possible to avoid re-renders of unchanged items
+      // If different, use addIdsToStep for proper recursive ID handling
       const newSteps = normalized.steps.map((step, index) => {
         const prevStep = prev.steps[index];
-        // If a step exists at this index and has the same type, reuse its ID
-        // This is a heuristic; for complex reorders external to this component it might be imperfect,
-        // but for standard usage it preserves stability.
+        // If a step exists at this index and has the same type, try to preserve its ID
         if (prevStep && prevStep.type === step.type) {
-          return { ...step, _id: prevStep._id };
+          const withId = addIdsToStep(step);
+          withId._id = prevStep._id;
+          return withId;
         }
-        return { ...step, _id: generateId() };
+        return addIdsToStep(step);
       });
 
       return {
@@ -381,10 +795,10 @@ const VisualDslEditor = forwardRef<VisualDslEditorRef, VisualDslEditorProps>(
         const nextSteps = [...prev.steps];
         nextSteps[0] = { ...firstStep, url: siteUrl };
 
-        // Create clean DSL for validation/onChange
+        // Create clean DSL for validation/onChange (recursive)
         const cleanDsl = {
           ...prev,
-          steps: nextSteps.map(({ _id, ...rest }) => rest),
+          steps: nextSteps.map(stripIdsFromStep),
         };
 
         emitValidation(validateDslStructure(cleanDsl));
@@ -402,10 +816,10 @@ const VisualDslEditor = forwardRef<VisualDslEditorRef, VisualDslEditorProps>(
         const next = updater(prev);
         if (next === prev) return prev;
 
-        // Strip IDs before sending to parent
+        // Strip IDs before sending to parent (recursively)
         const cleanDsl: FlowDSL = {
           ...next,
-          steps: next.steps.map(({ _id, ...rest }) => rest),
+          steps: next.steps.map(stripIdsFromStep),
         };
 
         // 立即更新本地状态（用户看到的UI）
@@ -456,8 +870,31 @@ const VisualDslEditor = forwardRef<VisualDslEditorRef, VisualDslEditorProps>(
   const handleDuplicate = useCallback((index: number) => {
     applyDslUpdate((current) => {
       const steps = [...current.steps];
-      const clone = { ...steps[index], _id: generateId() };
+      // Deep clone with new IDs for children
+      const clone = JSON.parse(JSON.stringify(steps[index]));
+      clone._id = generateId();
+      // Recursively assign new IDs to children
+      const assignNewIds = (step: SortableFlowStep) => {
+        step._id = generateId();
+        step.children?.forEach(assignNewIds);
+        step.else_children?.forEach(assignNewIds);
+      };
+      clone.children?.forEach(assignNewIds);
+      clone.else_children?.forEach(assignNewIds);
       steps.splice(index + 1, 0, clone);
+      return { ...current, steps };
+    });
+  }, [applyDslUpdate]);
+
+  // Handle children changes for container steps
+  const handleChildrenChange = useCallback((index: number, children: SortableFlowStep[], branch?: "else") => {
+    applyDslUpdate((current) => {
+      const steps = [...current.steps];
+      if (branch === "else") {
+        steps[index] = { ...steps[index], else_children: children };
+      } else {
+        steps[index] = { ...steps[index], children };
+      }
       return { ...current, steps };
     });
   }, [applyDslUpdate]);
@@ -520,6 +957,7 @@ const VisualDslEditor = forwardRef<VisualDslEditorRef, VisualDslEditorProps>(
                   onDuplicate={handleDuplicate}
                   onTypeChange={handleTypeChange}
                   onFieldChange={handleFieldChange}
+                  onChildrenChange={handleChildrenChange}
                 />
               ))}
             </AnimatePresence>

@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DSL 功能测试页面</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; padding: 20px; background: #f5f5f5; }
+    .container { max-width: 1200px; margin: 0 auto; }
+    h1 { color: #333; margin-bottom: 20px; }
+    .section { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .section h2 { color: #666; margin-bottom: 15px; font-size: 16px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+    button { padding: 10px 20px; margin: 5px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; transition: all 0.2s; }
+    .btn-primary { background: #1890ff; color: white; }
+    .btn-primary:hover { background: #40a9ff; }
+    .btn-success { background: #52c41a; color: white; }
+    .btn-success:hover { background: #73d13d; }
+    .btn-danger { background: #ff4d4f; color: white; }
+    .btn-danger:hover { background: #ff7875; }
+    input[type="text"], input[type="number"], select { padding: 8px 12px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px; margin: 5px; }
+    .result { padding: 15px; background: #f0f0f0; border-radius: 4px; margin-top: 10px; font-family: monospace; white-space: pre-wrap; }
+    .success { background: #f6ffed; border: 1px solid #b7eb8f; }
+    .error { background: #fff2f0; border: 1px solid #ffccc7; }
+    .code-list { list-style: none; }
+    .code-list li { padding: 10px; background: #e6f7ff; margin: 5px 0; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; }
+    .code-list li.used { background: #f0f0f0; color: #999; text-decoration: line-through; }
+    .lottery-result { font-size: 24px; font-weight: bold; padding: 20px; text-align: center; border-radius: 8px; margin: 20px 0; }
+    .lottery-win { background: linear-gradient(135deg, #ffd700, #ffec8b); color: #333; }
+    .lottery-lose { background: #f5f5f5; color: #999; }
+    .counter { font-size: 48px; font-weight: bold; color: #1890ff; }
+    .hover-menu { position: relative; display: inline-block; }
+    .hover-menu .dropdown { display: none; position: absolute; background: white; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border-radius: 4px; min-width: 150px; z-index: 10; }
+    .hover-menu:hover .dropdown { display: block; }
+    .hover-menu .dropdown a { display: block; padding: 10px 15px; color: #333; text-decoration: none; }
+    .hover-menu .dropdown a:hover { background: #f5f5f5; }
+    #hidden-element { display: none; }
+    .checkbox-group label { display: block; margin: 5px 0; cursor: pointer; }
+    .tab-content { display: none; padding: 15px; border: 1px solid #d9d9d9; border-top: none; border-radius: 0 0 4px 4px; }
+    .tab-content.active { display: block; }
+    .tabs button { border-radius: 4px 4px 0 0; margin: 0; }
+    .tabs button.active { background: #1890ff; color: white; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 DSL 功能测试页面</h1>
+    
+    <!-- 基础操作测试 -->
+    <div class="section">
+      <h2>1. 基础操作测试</h2>
+      <button id="btn-click" class="btn-primary" onclick="handleClick()">点击我</button>
+      <button id="btn-double" class="btn-success" ondblclick="handleDoubleClick()">双击我</button>
+      <span id="click-count">点击次数: 0</span>
+      <div class="result" id="click-result">等待点击...</div>
+    </div>
+
+    <!-- 输入测试 -->
+    <div class="section">
+      <h2>2. 输入测试</h2>
+      <input type="text" id="input-text" placeholder="输入文本测试">
+      <input type="number" id="input-number" placeholder="输入数字">
+      <select id="select-city">
+        <option value="">选择城市</option>
+        <option value="beijing">北京</option>
+        <option value="shanghai">上海</option>
+        <option value="guangzhou">广州</option>
+      </select>
+      <button class="btn-primary" onclick="showInputValues()">显示输入值</button>
+      <div class="result" id="input-result">输入值将显示在这里</div>
+    </div>
+
+    <!-- 悬停菜单测试 -->
+    <div class="section">
+      <h2>3. 悬停菜单测试</h2>
+      <div class="hover-menu" id="hover-menu">
+        <button class="btn-primary">悬停显示菜单</button>
+        <div class="dropdown" id="dropdown-menu">
+          <a href="#" onclick="selectMenuItem('选项1'); return false;">选项1</a>
+          <a href="#" onclick="selectMenuItem('选项2'); return false;">选项2</a>
+          <a href="#" onclick="selectMenuItem('选项3'); return false;">选项3</a>
+        </div>
+      </div>
+      <div class="result" id="hover-result">悬停菜单测试</div>
+    </div>
+
+    <!-- 条件判断测试 -->
+    <div class="section">
+      <h2>4. 条件判断测试（if_exists）</h2>
+      <button class="btn-success" onclick="showHiddenElement()">显示隐藏元素</button>
+      <button class="btn-danger" onclick="hideElement()">隐藏元素</button>
+      <div id="hidden-element" style="padding: 10px; background: #e6f7ff; margin-top: 10px;">
+        ✅ 我是可能存在也可能不存在的元素！
+      </div>
+      <div id="conditional-element" style="padding: 10px; background: #f6ffed; margin-top: 10px;">
+        🎯 始终存在的元素
+      </div>
+    </div>
+
+    <!-- 抽奖模拟测试 -->
+    <div class="section">
+      <h2>5. 抽奖模拟（用于测试条件分支）</h2>
+      <p>剩余抽奖次数: <span id="lottery-chances">3</span></p>
+      <button id="btn-lottery" class="btn-primary" onclick="doLottery()">🎰 抽奖</button>
+      <div class="lottery-result" id="lottery-result">点击抽奖按钮开始</div>
+      <div id="lottery-code" style="display: none;">
+        <p>恭喜获得兑换码:</p>
+        <strong id="won-code"></strong>
+      </div>
+    </div>
+
+    <!-- 兑换码列表（批量提取测试） -->
+    <div class="section">
+      <h2>6. 兑换码列表（extract_all 测试）</h2>
+      <ul class="code-list" id="code-list">
+        <li data-code="ABC123"><span class="code-text">ABC123</span> <button onclick="useCode(this)">使用</button></li>
+        <li data-code="DEF456"><span class="code-text">DEF456</span> <button onclick="useCode(this)">使用</button></li>
+        <li data-code="GHI789"><span class="code-text">GHI789</span> <button onclick="useCode(this)">使用</button></li>
+        <li data-code="JKL012"><span class="code-text">JKL012</span> <button onclick="useCode(this)">使用</button></li>
+        <li data-code="MNO345"><span class="code-text">MNO345</span> <button onclick="useCode(this)">使用</button></li>
+      </ul>
+      <button class="btn-success" onclick="addNewCode()">生成新兑换码</button>
+    </div>
+
+    <!-- 兑换码使用 -->
+    <div class="section">
+      <h2>7. 兑换码使用（输入变量测试）</h2>
+      <input type="text" id="redeem-input" placeholder="输入兑换码">
+      <button id="btn-redeem" class="btn-success" onclick="redeemCode()">兑换</button>
+      <div class="result" id="redeem-result">输入兑换码并点击兑换</div>
+    </div>
+
+    <!-- 复选框测试 -->
+    <div class="section">
+      <h2>8. 复选框测试</h2>
+      <div class="checkbox-group">
+        <label><input type="checkbox" id="cb-agree" value="agree"> 我同意服务条款</label>
+        <label><input type="checkbox" id="cb-news" value="news"> 订阅新闻</label>
+        <label><input type="checkbox" id="cb-promo" value="promo"> 接收促销信息</label>
+      </div>
+      <button class="btn-primary" onclick="checkSelected()">检查选中项</button>
+      <div class="result" id="checkbox-result">选中项将显示在这里</div>
+    </div>
+
+    <!-- 计数器测试（循环测试） -->
+    <div class="section">
+      <h2>9. 计数器测试（loop 测试）</h2>
+      <div class="counter" id="counter">0</div>
+      <button id="btn-increment" class="btn-primary" onclick="increment()">+1</button>
+      <button id="btn-decrement" class="btn-danger" onclick="decrement()">-1</button>
+      <button class="btn-success" onclick="resetCounter()">重置</button>
+    </div>
+
+    <!-- 键盘事件测试 -->
+    <div class="section">
+      <h2>10. 键盘事件测试</h2>
+      <input type="text" id="keyboard-input" placeholder="在此输入，按 Enter 提交" onkeydown="handleKeyboard(event)">
+      <div class="result" id="keyboard-result">键盘事件: 等待输入...</div>
+    </div>
+
+    <!-- 断言测试 -->
+    <div class="section">
+      <h2>11. 断言测试</h2>
+      <p id="assert-text">这是用于断言测试的文本内容：SUCCESS_MESSAGE</p>
+      <p id="assert-number">当前数值: <span id="assert-value">42</span></p>
+      <button class="btn-primary" onclick="changeAssertValue()">改变数值</button>
+    </div>
+
+    <!-- 滚动测试 -->
+    <div class="section" style="height: 300px; overflow: auto;" id="scroll-container">
+      <h2>12. 滚动测试</h2>
+      <div style="height: 800px; padding: 20px;">
+        <p id="scroll-top">顶部内容</p>
+        <div style="margin-top: 600px;">
+          <p id="scroll-bottom">底部内容 - 需要滚动才能看到</p>
+          <button id="btn-scroll-target" class="btn-success">滚动目标按钮</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 标签页切换测试 -->
+    <div class="section">
+      <h2>13. 标签页测试（new_tab / switch_tab）</h2>
+      <div class="tabs">
+        <button class="active" onclick="switchLocalTab(0)">标签1</button>
+        <button onclick="switchLocalTab(1)">标签2</button>
+        <button onclick="switchLocalTab(2)">标签3</button>
+      </div>
+      <div class="tab-content active" id="tab-1">
+        <h3>标签页 1 内容</h3>
+        <p>这是第一个标签页的内容</p>
+        <p id="tab1-data">数据: TAB1_VALUE_001</p>
+      </div>
+      <div class="tab-content" id="tab-2">
+        <h3>标签页 2 内容</h3>
+        <p>这是第二个标签页的内容</p>
+        <p id="tab2-data">数据: TAB2_VALUE_002</p>
+      </div>
+      <div class="tab-content" id="tab-3">
+        <h3>标签页 3 内容</h3>
+        <p>这是第三个标签页的内容</p>
+        <p id="tab3-data">数据: TAB3_VALUE_003</p>
+      </div>
+    </div>
+
+    <!-- 执行 JS 测试 -->
+    <div class="section">
+      <h2>14. 执行 JS 测试（eval_js）</h2>
+      <button class="btn-primary" onclick="runCustomJS()">执行自定义JS</button>
+      <div class="result" id="js-result">JS 执行结果将显示在这里</div>
+    </div>
+  </div>
+
+  <script>
+    // 基础点击
+    let clickCount = 0;
+    function handleClick() {
+      clickCount++;
+      document.getElementById('click-count').textContent = '点击次数: ' + clickCount;
+      document.getElementById('click-result').textContent = '按钮被点击了！时间: ' + new Date().toLocaleTimeString();
+      document.getElementById('click-result').className = 'result success';
+    }
+    function handleDoubleClick() {
+      document.getElementById('click-result').textContent = '按钮被双击了！';
+      document.getElementById('click-result').className = 'result success';
+    }
+
+    // 输入测试
+    function showInputValues() {
+      const text = document.getElementById('input-text').value;
+      const number = document.getElementById('input-number').value;
+      const city = document.getElementById('select-city').value;
+      document.getElementById('input-result').textContent = 
+        `文本: ${text || '(空)'}\n数字: ${number || '(空)'}\n城市: ${city || '(未选择)'}`;
+    }
+
+    // 悬停菜单
+    function selectMenuItem(item) {
+      document.getElementById('hover-result').textContent = '选中了: ' + item;
+      document.getElementById('hover-result').className = 'result success';
+    }
+
+    // 条件判断
+    function showHiddenElement() {
+      document.getElementById('hidden-element').style.display = 'block';
+    }
+    function hideElement() {
+      document.getElementById('hidden-element').style.display = 'none';
+    }
+
+    // 抽奖模拟
+    let lotteryChances = 3;
+    const codes = ['PRIZE-A1B2C3', 'PRIZE-D4E5F6', 'PRIZE-G7H8I9', 'PRIZE-J0K1L2'];
+    function doLottery() {
+      if (lotteryChances <= 0) {
+        document.getElementById('lottery-result').textContent = '抽奖次数已用完！';
+        document.getElementById('lottery-result').className = 'lottery-result lottery-lose';
+        return;
+      }
+      
+      lotteryChances--;
+      document.getElementById('lottery-chances').textContent = lotteryChances;
+      
+      // 50% 中奖概率
+      const win = Math.random() > 0.5;
+      
+      if (win) {
+        const code = codes[Math.floor(Math.random() * codes.length)];
+        document.getElementById('lottery-result').textContent = '🎉 恭喜中奖！';
+        document.getElementById('lottery-result').className = 'lottery-result lottery-win';
+        document.getElementById('lottery-code').style.display = 'block';
+        document.getElementById('won-code').textContent = code;
+      } else {
+        document.getElementById('lottery-result').textContent = '😢 很遗憾，未中奖';
+        document.getElementById('lottery-result').className = 'lottery-result lottery-lose';
+        document.getElementById('lottery-code').style.display = 'none';
+      }
+    }
+
+    // 兑换码列表
+    function useCode(btn) {
+      const li = btn.parentElement;
+      li.classList.add('used');
+      btn.disabled = true;
+      btn.textContent = '已使用';
+    }
+    function addNewCode() {
+      const code = 'NEW' + Math.random().toString(36).substr(2, 6).toUpperCase();
+      const li = document.createElement('li');
+      li.setAttribute('data-code', code);
+      li.innerHTML = `<span class="code-text">${code}</span> <button onclick="useCode(this)">使用</button>`;
+      document.getElementById('code-list').appendChild(li);
+    }
+
+    // 兑换码使用
+    function redeemCode() {
+      const code = document.getElementById('redeem-input').value.trim();
+      if (!code) {
+        document.getElementById('redeem-result').textContent = '请输入兑换码';
+        document.getElementById('redeem-result').className = 'result error';
+        return;
+      }
+      
+      // 模拟验证
+      if (code.startsWith('PRIZE-') || code.length === 6) {
+        document.getElementById('redeem-result').textContent = '✅ 兑换成功！兑换码: ' + code;
+        document.getElementById('redeem-result').className = 'result success';
+      } else {
+        document.getElementById('redeem-result').textContent = '❌ 无效的兑换码: ' + code;
+        document.getElementById('redeem-result').className = 'result error';
+      }
+    }
+
+    // 复选框
+    function checkSelected() {
+      const checkboxes = document.querySelectorAll('.checkbox-group input:checked');
+      const values = Array.from(checkboxes).map(cb => cb.value);
+      document.getElementById('checkbox-result').textContent = 
+        values.length > 0 ? '选中: ' + values.join(', ') : '未选中任何项';
+    }
+
+    // 计数器
+    let counter = 0;
+    function increment() {
+      counter++;
+      document.getElementById('counter').textContent = counter;
+    }
+    function decrement() {
+      counter--;
+      document.getElementById('counter').textContent = counter;
+    }
+    function resetCounter() {
+      counter = 0;
+      document.getElementById('counter').textContent = counter;
+    }
+
+    // 键盘事件
+    function handleKeyboard(event) {
+      document.getElementById('keyboard-result').textContent = 
+        `按键: ${event.key} | 代码: ${event.code} | Ctrl: ${event.ctrlKey} | Shift: ${event.shiftKey}`;
+      
+      if (event.key === 'Enter') {
+        const value = event.target.value;
+        document.getElementById('keyboard-result').textContent += '\n✅ 已提交: ' + value;
+        document.getElementById('keyboard-result').className = 'result success';
+      }
+    }
+
+    // 断言测试
+    function changeAssertValue() {
+      const current = parseInt(document.getElementById('assert-value').textContent);
+      document.getElementById('assert-value').textContent = current + 1;
+    }
+
+    // 标签页切换
+    function switchLocalTab(index) {
+      document.querySelectorAll('.tabs button').forEach((btn, i) => {
+        btn.classList.toggle('active', i === index);
+      });
+      document.querySelectorAll('.tab-content').forEach((content, i) => {
+        content.classList.toggle('active', i === index);
+      });
+    }
+
+    // 执行 JS
+    function runCustomJS() {
+      const result = {
+        title: document.title,
+        url: window.location.href,
+        timestamp: new Date().toISOString(),
+        counterValue: counter,
+        clickCount: clickCount
+      };
+      document.getElementById('js-result').textContent = JSON.stringify(result, null, 2);
+    }
+
+    // 页面加载完成提示
+    console.log('DSL 测试页面已加载');
+    console.log('可用于测试的选择器示例:');
+    console.log('  #btn-click - 点击按钮');
+    console.log('  #input-text - 文本输入框');
+    console.log('  #select-city - 下拉选择');
+    console.log('  .code-text - 兑换码文本列表');
+    console.log('  #hidden-element - 可显示/隐藏的元素');
+  </script>
+</body>
+</html>

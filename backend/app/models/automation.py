@@ -47,4 +47,7 @@ class AutomationFlow(IDModel, TimestampedModel, table=True):
     )
 
     site: "Site" = Relationship(back_populates="automation_flows")
-    checkins: List["CheckinHistory"] = Relationship(back_populates="flow")
+    checkins: List["CheckinHistory"] = Relationship(
+        back_populates="flow",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
+    )

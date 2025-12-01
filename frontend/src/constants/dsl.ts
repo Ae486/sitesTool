@@ -1,6 +1,11 @@
 import rawSchema from "./dslSchema.json";
 
-export type StepFieldType = "text" | "number" | "boolean";
+export type StepFieldType = "text" | "number" | "boolean" | "select";
+
+export interface SelectOption {
+  value: string;
+  label: string;
+}
 
 export interface StepFieldDefinition {
   name: string;
@@ -8,17 +13,35 @@ export interface StepFieldDefinition {
   type: StepFieldType;
   placeholder?: string;
   required?: boolean;
+  options?: SelectOption[];  // For select type
 }
 
 export interface StepDefinition {
   label: string;
   description: string;
   fields: StepFieldDefinition[];
+  /** If true, this step can contain children steps */
+  container?: boolean;
+  /** Label for the children container */
+  containerLabel?: string;
+  /** If true, this container has an else branch */
+  hasElse?: boolean;
+  /** Label for the else branch */
+  elseLabel?: string;
 }
 
 export type StepDefinitionMap = Record<string, StepDefinition>;
 
 export const DSL_SCHEMA = rawSchema as StepDefinitionMap;
+
+/** Get all container step types */
+export const CONTAINER_STEP_TYPES = Object.entries(DSL_SCHEMA)
+  .filter(([_, def]) => def.container)
+  .map(([type]) => type);
+
+/** Check if a step type is a container */
+export const isContainerType = (type: string): boolean => 
+  DSL_SCHEMA[type]?.container === true;
 
 type FieldTypeMap = {
   text: string;
@@ -41,14 +64,22 @@ type BuildStep<T extends keyof StepDefinitionMap> = {
   [F in FieldDefinition<T> as F["name"]]?: FieldValue<F>;
 };
 
-export type VisualDslStep = {
+/** Base step type without children */
+type BaseVisualDslStep = {
   [K in keyof StepDefinitionMap]: BuildStep<K>;
 }[keyof StepDefinitionMap];
+
+/** Step that may have nested children */
+export type VisualDslStep = BaseVisualDslStep & {
+  /** Nested steps for container types (loop, if_else, etc.) */
+  children?: VisualDslStep[];
+  /** Else branch steps for if_else type */
+  else_children?: VisualDslStep[];
+};
 
 export interface VisualDsl {
   version: number;
   steps: VisualDslStep[];
-  [key: string]: unknown;
 }
 
 export const STEP_TYPE_OPTIONS = Object.entries(DSL_SCHEMA).map(

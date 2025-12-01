@@ -11,6 +11,8 @@ from typing import Any, Optional
 from playwright.async_api import Browser, Page, async_playwright
 
 from app.services.automation.dsl_parser import ParsedStep, StepType
+from app.services.automation.error_types import classify_error, ErrorType
+from app.services.automation.cloudflare_handler import CloudflareHandler
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +58,7 @@ class PlaywrightExecutor:
         browser_path: str | None = None,
         screenshot_dir: str = "data/screenshots",
         storage_state_dir: str = "data/storage_states",
+        cf_protection: bool = True,  # Enable Cloudflare auto-handling
     ):
         self.headless = headless
         self.browser_type = browser_type
@@ -64,6 +67,14 @@ class PlaywrightExecutor:
         self.screenshot_dir.mkdir(parents=True, exist_ok=True)
         self.storage_state_dir = Path(storage_state_dir)
         self.storage_state_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Cloudflare challenge handler
+        self.cf_handler = CloudflareHandler(
+            enabled=cf_protection,
+            check_probability=0.3,  # 30% random check between steps
+            max_wait_time=45000,    # 45 seconds max wait
+            check_after_navigate=True,  # Always check after navigation
+        )
 
     async def execute(
         self,
@@ -210,13 +221,52 @@ class PlaywrightExecutor:
                 
                 browser = await browser_launcher.launch(**launch_options)
                 
-                # Prepare context options
+                # Prepare context options with anti-detection measures
                 context_options = {
-                    "viewport": {"width": 1280, "height": 720},
-                    "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                    "viewport": {"width": 1920, "height": 1080},
+                    "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                    "locale": "zh-CN",
+                    "timezone_id": "Asia/Shanghai",
+                    # Reduce bot detection
+                    "java_script_enabled": True,
+                    "bypass_csp": False,
+                    "ignore_https_errors": True,
                 }
-                
+
                 context = await browser.new_context(**context_options)
+                
+                # Anti-detection: Override navigator properties
+                await context.add_init_script("""
+                    // Override webdriver detection
+                    Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+                    
+                    // Override plugins
+                    Object.defineProperty(navigator, 'plugins', {
+                        get: () => [1, 2, 3, 4, 5]
+                    });
+                    
+                    // Override languages
+                    Object.defineProperty(navigator, 'languages', {
+                        get: () => ['zh-CN', 'zh', 'en']
+                    });
+                    
+                    // Override permissions
+                    const originalQuery = window.navigator.permissions.query;
+                    window.navigator.permissions.query = (parameters) => (
+                        parameters.name === 'notifications' ?
+                            Promise.resolve({ state: Notification.permission }) :
+                            originalQuery(parameters)
+                    );
+                    
+                    // Chrome runtime mock
+                    window.chrome = { runtime: {} };
+                    
+                    // Override hardware concurrency
+                    Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => 8 });
+                    
+                    // Override device memory
+                    Object.defineProperty(navigator, 'deviceMemory', { get: () => 8 });
+                """)
                 page = await context.new_page()
             
             # Ensure we have a page
@@ -228,6 +278,12 @@ class PlaywrightExecutor:
                     logger.info(f"Executing step {idx + 1}/{len(steps)}: {step.type}")
                     step_start = datetime.utcnow()
 
+                    # Pre-step CF check (random probability)
+                    if await self.cf_handler.should_check(after_navigate=False):
+                        cf_result = await self.cf_handler.check_and_handle(page)
+                        if cf_result["detected"]:
+                            logger.info(f"🛡️ Pre-step CF check: {cf_result['type']} handled={cf_result['handled']}")
+
                     try:
                         result = await self._execute_step(
                             page, step, idx, variables, flow_id
@@ -236,6 +292,14 @@ class PlaywrightExecutor:
 
                         if result.extracted_data:
                             variables.update(result.extracted_data)
+
+                        # Post-navigate CF check (always after navigation)
+                        if result.success and step.type == StepType.NAVIGATE:
+                            cf_result = await self.cf_handler.check_and_handle(page)
+                            if cf_result["detected"]:
+                                logger.info(f"🛡️ Post-navigate CF: {cf_result['type']} handled={cf_result['handled']} ({cf_result['duration_ms']}ms)")
+                                if not cf_result["handled"]:
+                                    logger.warning("⚠️ CF challenge not resolved, continuing anyway...")
 
                         if not result.success:
                             steps_failed += 1
@@ -320,6 +384,7 @@ class PlaywrightExecutor:
         index: int,
         variables: dict[str, Any],
         flow_id: int,
+        context=None,
     ) -> StepResult:
         """Execute a single step."""
         start_time = datetime.utcnow()
@@ -335,6 +400,22 @@ class PlaywrightExecutor:
             StepType.SELECT: self._handle_select,
             StepType.CHECKBOX: self._handle_checkbox,
             StepType.SCROLL: self._handle_scroll,
+            StepType.HOVER: self._handle_hover,
+            StepType.KEYBOARD: self._handle_keyboard,
+            StepType.SET_VARIABLE: self._handle_set_variable,
+            StepType.IF_EXISTS: self._handle_if_exists,
+            StepType.ASSERT_TEXT: self._handle_assert_text,
+            StepType.ASSERT_VISIBLE: self._handle_assert_visible,
+            StepType.EXTRACT_ALL: self._handle_extract_all,
+            StepType.RANDOM_DELAY: self._handle_random_delay,
+            StepType.TRY_CLICK: self._handle_try_click,
+            StepType.EVAL_JS: self._handle_eval_js,
+            StepType.NEW_TAB: self._handle_new_tab,
+            StepType.SWITCH_TAB: self._handle_switch_tab,
+            StepType.CLOSE_TAB: self._handle_close_tab,
+            StepType.LOOP: self._handle_loop,
+            StepType.LOOP_ARRAY: self._handle_loop_array,
+            StepType.IF_ELSE: self._handle_if_else,
         }
 
         handler = handlers.get(step.type)
@@ -507,6 +588,429 @@ class PlaywrightExecutor:
             await page.evaluate(f"window.scrollBy({x}, {y})")
             return {"message": f"Scrolled by ({x}, {y})"}
 
+    async def _handle_hover(
+        self, page: Page, params: dict, variables: dict, flow_id: int, index: int
+    ) -> dict:
+        """Handle hover step."""
+        selector = params["selector"]
+        await page.hover(selector)
+        return {"message": f"Hovered over {selector}"}
+
+    async def _handle_keyboard(
+        self, page: Page, params: dict, variables: dict, flow_id: int, index: int
+    ) -> dict:
+        """Handle keyboard step."""
+        key = params["key"]
+        await page.keyboard.press(key)
+        return {"message": f"Pressed key: {key}"}
+
+    async def _handle_set_variable(
+        self, page: Page, params: dict, variables: dict, flow_id: int, index: int
+    ) -> dict:
+        """Handle set_variable step."""
+        variable = params["variable"]
+        value = self._resolve_variables(params["value"], variables)
+        return {
+            "message": f"Set variable {variable} = {value}",
+            "extracted_data": {variable: value},
+        }
+
+    async def _handle_if_exists(
+        self, page: Page, params: dict, variables: dict, flow_id: int, index: int
+    ) -> dict:
+        """Handle if_exists step - check if element exists."""
+        selector = params["selector"]
+        variable = params["variable"]
+        timeout = params.get("timeout", 3000)
+
+        try:
+            await page.wait_for_selector(selector, timeout=timeout, state="attached")
+            exists = True
+        except Exception:
+            exists = False
+
+        return {
+            "message": f"Element {selector} exists: {exists}",
+            "extracted_data": {variable: exists},
+        }
+
+    async def _handle_assert_text(
+        self, page: Page, params: dict, variables: dict, flow_id: int, index: int
+    ) -> dict:
+        """Handle assert_text step - verify element contains text."""
+        selector = params["selector"]
+        expected = self._resolve_variables(params["expected"], variables)
+
+        actual_text = await page.text_content(selector)
+        if actual_text is None or expected not in actual_text:
+            raise AssertionError(
+                f"断言失败：元素 {selector} 不包含文本 '{expected}'。实际文本: '{actual_text}'"
+            )
+
+        return {"message": f"Assertion passed: '{expected}' found in {selector}"}
+
+    async def _handle_assert_visible(
+        self, page: Page, params: dict, variables: dict, flow_id: int, index: int
+    ) -> dict:
+        """Handle assert_visible step - verify element is visible."""
+        selector = params["selector"]
+        timeout = params.get("timeout", 5000)
+
+        await page.wait_for_selector(selector, timeout=timeout, state="visible")
+        return {"message": f"Assertion passed: {selector} is visible"}
+
+    async def _handle_extract_all(
+        self, page: Page, params: dict, variables: dict, flow_id: int, index: int
+    ) -> dict:
+        """Handle extract_all step - extract all matching elements."""
+        selector = params["selector"]
+        variable = params["variable"]
+        attribute = params.get("attribute")
+
+        elements = page.locator(selector)
+        count = await elements.count()
+
+        values = []
+        for i in range(count):
+            el = elements.nth(i)
+            if attribute:
+                val = await el.get_attribute(attribute)
+            else:
+                val = await el.text_content()
+            if val:
+                values.append(val.strip())
+
+        return {
+            "message": f"Extracted {len(values)} items from {selector}",
+            "extracted_data": {variable: values},
+        }
+
+    async def _handle_random_delay(
+        self, page: Page, params: dict, variables: dict, flow_id: int, index: int
+    ) -> dict:
+        """Handle random_delay step."""
+        import random
+
+        min_ms = params["min"]
+        max_ms = params["max"]
+        delay = random.randint(min_ms, max_ms)
+        await asyncio.sleep(delay / 1000)
+        return {"message": f"Random delay: {delay}ms (range: {min_ms}-{max_ms})"}
+
+    async def _handle_try_click(
+        self, page: Page, params: dict, variables: dict, flow_id: int, index: int
+    ) -> dict:
+        """Handle try_click step - click if element exists, skip otherwise."""
+        selector = params["selector"]
+        timeout = params.get("timeout", 3000)
+
+        try:
+            await page.wait_for_selector(selector, timeout=timeout, state="visible")
+            await page.click(selector)
+            return {"message": f"Clicked {selector}"}
+        except Exception:
+            return {"message": f"Skipped click: {selector} not found"}
+
+    async def _handle_eval_js(
+        self, page: Page, params: dict, variables: dict, flow_id: int, index: int
+    ) -> dict:
+        """Handle eval_js step - execute JavaScript in page context."""
+        script = self._resolve_variables(params["script"], variables)
+        variable = params.get("variable")
+
+        result = await page.evaluate(script)
+
+        if variable:
+            return {
+                "message": f"Executed JS, result stored in {variable}",
+                "extracted_data": {variable: result},
+            }
+        return {"message": f"Executed JS, result: {result}"}
+
+    async def _handle_new_tab(
+        self, page: Page, params: dict, variables: dict, flow_id: int, index: int
+    ) -> dict:
+        """Handle new_tab step - open URL in new tab."""
+        url = self._resolve_variables(params["url"], variables)
+        tab_variable = params.get("tab_variable")
+        
+        # Store reference to context from page
+        context = page.context
+        new_page = await context.new_page()
+        await new_page.goto(url)
+        
+        # Store page index as reference
+        pages = context.pages
+        tab_index = len(pages) - 1
+        
+        result = {"message": f"Opened new tab ({tab_index}) with URL: {url}"}
+        if tab_variable:
+            result["extracted_data"] = {tab_variable: tab_index}
+        return result
+
+    async def _handle_switch_tab(
+        self, page: Page, params: dict, variables: dict, flow_id: int, index: int
+    ) -> dict:
+        """Handle switch_tab step - switch to tab by index."""
+        tab_index = int(params["index"])
+        context = page.context
+        pages = context.pages
+        
+        if tab_index < 0 or tab_index >= len(pages):
+            raise ValueError(f"Tab index {tab_index} out of range (0-{len(pages)-1})")
+        
+        target_page = pages[tab_index]
+        await target_page.bring_to_front()
+        return {"message": f"Switched to tab {tab_index}"}
+
+    async def _handle_close_tab(
+        self, page: Page, params: dict, variables: dict, flow_id: int, index: int
+    ) -> dict:
+        """Handle close_tab step - close current tab."""
+        await page.close()
+        return {"message": "Closed current tab"}
+
+    async def _handle_loop(
+        self, page: Page, params: dict, variables: dict, flow_id: int, index: int
+    ) -> dict:
+        """Handle loop step - execute children N times."""
+        times = int(params.get("times", 1))
+        children = params.get("children", [])
+        
+        if not children:
+            return {"message": f"Loop: no children to execute ({times} iterations)"}
+        
+        loop_results = []
+        for i in range(times):
+            logger.info(f"Loop iteration {i + 1}/{times}")
+            for child in children:
+                # Execute each child step
+                child_result = await self._execute_child_step(page, child, variables, flow_id)
+                loop_results.append(child_result)
+                if child_result.get("extracted_data"):
+                    variables.update(child_result["extracted_data"])
+        
+        return {
+            "message": f"Loop completed: {times} iterations, {len(children)} steps each",
+            "extracted_data": {"_loop_results": loop_results},
+        }
+
+    async def _handle_loop_array(
+        self, page: Page, params: dict, variables: dict, flow_id: int, index: int
+    ) -> dict:
+        """Handle loop_array step - iterate over array variable."""
+        array_variable = params["array_variable"]
+        item_variable = params["item_variable"]
+        children = params.get("children", [])
+        
+        arr = variables.get(array_variable, [])
+        if not isinstance(arr, list):
+            arr = []
+        
+        if not children:
+            return {"message": f"Loop array: no children ({len(arr)} items in {array_variable})"}
+        
+        loop_results = []
+        for i, item in enumerate(arr):
+            logger.info(f"Loop array iteration {i + 1}/{len(arr)}: {item_variable}={item}")
+            variables[item_variable] = item
+            for child in children:
+                child_result = await self._execute_child_step(page, child, variables, flow_id)
+                loop_results.append(child_result)
+                if child_result.get("extracted_data"):
+                    variables.update(child_result["extracted_data"])
+        
+        return {
+            "message": f"Loop array completed: {len(arr)} iterations over {array_variable}",
+            "extracted_data": {"_loop_array_results": loop_results},
+        }
+
+    async def _handle_if_else(
+        self, page: Page, params: dict, variables: dict, flow_id: int, index: int
+    ) -> dict:
+        """Handle if_else step - conditional branching with multiple condition types."""
+        condition_type = params.get("condition_type", "variable_truthy")
+        condition_variable = params.get("condition_variable", "")
+        condition_selector = params.get("condition_selector", "")
+        condition_value = params.get("condition_value", "")
+        timeout = params.get("timeout", 3000)
+        children = params.get("children", [])
+        else_children = params.get("else_children", [])
+        
+        # Evaluate condition based on type
+        is_true = False
+        condition_detail = ""
+        
+        try:
+            if condition_type == "variable_truthy":
+                # Variable is truthy (non-empty, non-zero, non-false)
+                var_value = variables.get(condition_variable)
+                is_true = bool(var_value) and var_value not in [0, "0", "false", "False", ""]
+                condition_detail = f"变量 {condition_variable}={var_value}"
+                
+            elif condition_type == "variable_equals":
+                # Variable equals specific value
+                var_value = str(variables.get(condition_variable, ""))
+                is_true = var_value == condition_value
+                condition_detail = f"变量 {condition_variable}('{var_value}') == '{condition_value}'"
+                
+            elif condition_type == "variable_contains":
+                # Variable contains specific text
+                var_value = str(variables.get(condition_variable, ""))
+                is_true = condition_value in var_value
+                condition_detail = f"变量 {condition_variable}('{var_value}') 包含 '{condition_value}'"
+                
+            elif condition_type == "variable_greater":
+                # Variable greater than number
+                var_value = float(variables.get(condition_variable, 0))
+                compare_value = float(condition_value)
+                is_true = var_value > compare_value
+                condition_detail = f"变量 {condition_variable}({var_value}) > {compare_value}"
+                
+            elif condition_type == "variable_less":
+                # Variable less than number
+                var_value = float(variables.get(condition_variable, 0))
+                compare_value = float(condition_value)
+                is_true = var_value < compare_value
+                condition_detail = f"变量 {condition_variable}({var_value}) < {compare_value}"
+                
+            elif condition_type == "element_exists":
+                # Element exists in page
+                try:
+                    element = await page.wait_for_selector(condition_selector, timeout=timeout, state="attached")
+                    is_true = element is not None
+                except Exception:
+                    is_true = False
+                condition_detail = f"元素 {condition_selector} 存在"
+                
+            elif condition_type == "element_visible":
+                # Element is visible
+                try:
+                    element = await page.wait_for_selector(condition_selector, timeout=timeout, state="visible")
+                    is_true = element is not None
+                except Exception:
+                    is_true = False
+                condition_detail = f"元素 {condition_selector} 可见"
+                
+            elif condition_type == "element_text_equals":
+                # Element text equals value
+                try:
+                    element = await page.wait_for_selector(condition_selector, timeout=timeout)
+                    if element:
+                        text = await element.text_content() or ""
+                        is_true = text.strip() == condition_value
+                        condition_detail = f"元素文本('{text.strip()}') == '{condition_value}'"
+                    else:
+                        is_true = False
+                        condition_detail = f"元素 {condition_selector} 不存在"
+                except Exception:
+                    is_true = False
+                    condition_detail = f"元素 {condition_selector} 检测失败"
+                    
+            elif condition_type == "element_text_contains":
+                # Element text contains value
+                try:
+                    element = await page.wait_for_selector(condition_selector, timeout=timeout)
+                    if element:
+                        text = await element.text_content() or ""
+                        is_true = condition_value in text
+                        condition_detail = f"元素文本('{text[:50]}...') 包含 '{condition_value}'"
+                    else:
+                        is_true = False
+                        condition_detail = f"元素 {condition_selector} 不存在"
+                except Exception:
+                    is_true = False
+                    condition_detail = f"元素 {condition_selector} 检测失败"
+            else:
+                # Unknown condition type, default to false
+                condition_detail = f"未知条件类型: {condition_type}"
+                
+        except Exception as e:
+            logger.warning(f"Condition evaluation error: {e}")
+            condition_detail = f"条件求值错误: {e}"
+        
+        branch_name = "then" if is_true else "else"
+        target_children = children if is_true else else_children
+        
+        logger.info(f"If-else: [{condition_type}] {condition_detail} -> {is_true} -> {branch_name}")
+        
+        if not target_children:
+            return {
+                "message": f"If-else: {condition_detail} = {is_true}, {branch_name} 分支为空",
+                "extracted_data": {"_condition_result": is_true, "_condition_detail": condition_detail},
+            }
+        
+        branch_results = []
+        for child in target_children:
+            child_result = await self._execute_child_step(page, child, variables, flow_id)
+            branch_results.append(child_result)
+            if child_result.get("extracted_data"):
+                variables.update(child_result["extracted_data"])
+        
+        return {
+            "message": f"If-else: {condition_detail} = {is_true}, 执行 {branch_name} ({len(target_children)} 步)",
+            "extracted_data": {
+                "_condition_result": is_true,
+                "_condition_detail": condition_detail,
+                "_if_else_branch": branch_name,
+                "_if_else_results": branch_results,
+            },
+        }
+
+    async def _execute_child_step(
+        self, page: Page, step_data: dict, variables: dict, flow_id: int
+    ) -> dict:
+        """Execute a child step from nested DSL structure."""
+        from app.services.automation.dsl_parser import ParsedStep, StepType
+        
+        step_type_str = step_data.get("type", "")
+        if step_type_str not in [e.value for e in StepType]:
+            return {"success": False, "error": f"Unknown step type: {step_type_str}"}
+        
+        step_type = StepType(step_type_str)
+        params = {k: v for k, v in step_data.items() if k not in ["type", "description"]}
+        
+        # Get the appropriate handler
+        handlers = {
+            StepType.NAVIGATE: self._handle_navigate,
+            StepType.CLICK: self._handle_click,
+            StepType.INPUT: self._handle_input,
+            StepType.WAIT_FOR: self._handle_wait_for,
+            StepType.WAIT_TIME: self._handle_wait_time,
+            StepType.EXTRACT: self._handle_extract,
+            StepType.SCREENSHOT: self._handle_screenshot,
+            StepType.SELECT: self._handle_select,
+            StepType.CHECKBOX: self._handle_checkbox,
+            StepType.SCROLL: self._handle_scroll,
+            StepType.HOVER: self._handle_hover,
+            StepType.KEYBOARD: self._handle_keyboard,
+            StepType.SET_VARIABLE: self._handle_set_variable,
+            StepType.IF_EXISTS: self._handle_if_exists,
+            StepType.ASSERT_TEXT: self._handle_assert_text,
+            StepType.ASSERT_VISIBLE: self._handle_assert_visible,
+            StepType.EXTRACT_ALL: self._handle_extract_all,
+            StepType.RANDOM_DELAY: self._handle_random_delay,
+            StepType.TRY_CLICK: self._handle_try_click,
+            StepType.EVAL_JS: self._handle_eval_js,
+            StepType.NEW_TAB: self._handle_new_tab,
+            StepType.SWITCH_TAB: self._handle_switch_tab,
+            StepType.CLOSE_TAB: self._handle_close_tab,
+            StepType.LOOP: self._handle_loop,
+            StepType.LOOP_ARRAY: self._handle_loop_array,
+            StepType.IF_ELSE: self._handle_if_else,
+        }
+        
+        handler = handlers.get(step_type)
+        if not handler:
+            return {"success": False, "error": f"No handler for: {step_type_str}"}
+        
+        try:
+            result = await handler(page, params, variables, flow_id, 0)
+            return {"success": True, **result}
+        except Exception as e:
+            logger.error(f"Child step error ({step_type_str}): {e}")
+            return {"success": False, "error": str(e)}
+
     def _resolve_variables(self, value: str, variables: dict) -> str:
         """Resolve variable placeholders in string values."""
         if not isinstance(value, str):
@@ -521,20 +1025,9 @@ class PlaywrightExecutor:
         return value
 
     def _classify_error(self, error: Exception) -> str:
-        """Classify error type for better diagnostics."""
-        error_str = str(error).lower()
-        error_type = type(error).__name__
-
-        if "timeout" in error_str or "TimeoutError" in error_type:
-            return "TIMEOUT"
-        elif "selector" in error_str or "element" in error_str or "locator" in error_str:
-            return "ELEMENT_NOT_FOUND"
-        elif "navigation" in error_str or "net::" in error_str:
-            return "NAVIGATION_ERROR"
-        elif "permission" in error_str or "denied" in error_str:
-            return "PERMISSION_ERROR"
-        else:
-            return "EXECUTION_ERROR"
+        """Classify error type for better diagnostics using the error_types module."""
+        error_type = classify_error(error)
+        return error_type.value
 
     async def _format_error_detail(
         self, error: Exception, step: ParsedStep, page: Page

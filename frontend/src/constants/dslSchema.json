@@ -3,25 +3,22 @@
     "label": "打开页面",
     "description": "导航到指定 URL",
     "fields": [
-      { "name": "url", "label": "URL", "type": "text", "placeholder": "https://example.com", "required": true },
-      { "name": "description", "label": "步骤说明", "type": "text", "placeholder": "可选：说明本步骤" }
+      { "name": "url", "label": "URL", "type": "text", "placeholder": "https://example.com", "required": true }
     ]
   },
   "click": {
     "label": "点击元素",
     "description": "点击页面上的元素",
     "fields": [
-      { "name": "selector", "label": "选择器", "type": "text", "placeholder": "#button", "required": true },
-      { "name": "description", "label": "步骤说明", "type": "text", "placeholder": "可选：说明本步骤" }
+      { "name": "selector", "label": "选择器", "type": "text", "placeholder": "#button", "required": true }
     ]
   },
   "input": {
     "label": "输入文本",
-    "description": "向输入框填入内容",
+    "description": "向输入框填入内容（支持变量 {{var}}）",
     "fields": [
       { "name": "selector", "label": "选择器", "type": "text", "placeholder": "#username", "required": true },
-      { "name": "value", "label": "输入值", "type": "text", "placeholder": "要输入的内容", "required": true },
-      { "name": "description", "label": "步骤说明", "type": "text", "placeholder": "可选：说明本步骤" }
+      { "name": "value", "label": "输入值", "type": "text", "placeholder": "要输入的内容或 {{变量名}}", "required": true }
     ]
   },
   "wait_for": {
@@ -29,16 +26,14 @@
     "description": "等待元素出现",
     "fields": [
       { "name": "selector", "label": "选择器", "type": "text", "placeholder": "#element", "required": true },
-      { "name": "timeout", "label": "超时时间(毫秒)", "type": "number", "placeholder": "可选：默认 3000" },
-      { "name": "description", "label": "步骤说明", "type": "text", "placeholder": "可选：说明本步骤" }
+      { "name": "timeout", "label": "超时时间(毫秒)", "type": "number", "placeholder": "可选：默认 10000" }
     ]
   },
   "wait_time": {
     "label": "等待时间",
     "description": "固定等待指定时间（毫秒）",
     "fields": [
-      { "name": "duration", "label": "时长(毫秒)", "type": "number", "placeholder": "2000", "required": true },
-      { "name": "description", "label": "步骤说明", "type": "text", "placeholder": "可选：说明本步骤" }
+      { "name": "duration", "label": "时长(毫秒)", "type": "number", "placeholder": "2000", "required": true }
     ]
   },
   "extract": {
@@ -47,7 +42,7 @@
     "fields": [
       { "name": "selector", "label": "选择器", "type": "text", "placeholder": "#points", "required": true },
       { "name": "variable", "label": "变量名", "type": "text", "placeholder": "current_points", "required": true },
-      { "name": "description", "label": "步骤说明", "type": "text", "placeholder": "可选：说明本步骤" }
+      { "name": "attribute", "label": "属性名", "type": "text", "placeholder": "可选：提取属性值如 href、value" }
     ]
   },
   "screenshot": {
@@ -55,8 +50,7 @@
     "description": "保存当前页面截图",
     "fields": [
       { "name": "path", "label": "保存路径", "type": "text", "placeholder": "可选，默认自动命名" },
-      { "name": "full_page", "label": "全页模式", "type": "boolean" },
-      { "name": "description", "label": "步骤说明", "type": "text", "placeholder": "可选：说明本步骤" }
+      { "name": "full_page", "label": "全页模式", "type": "boolean" }
     ]
   },
   "select": {
@@ -64,8 +58,7 @@
     "description": "选择下拉框选项",
     "fields": [
       { "name": "selector", "label": "选择器", "type": "text", "placeholder": "#city", "required": true },
-      { "name": "value", "label": "选项值", "type": "text", "placeholder": "shanghai", "required": true },
-      { "name": "description", "label": "步骤说明", "type": "text", "placeholder": "可选：说明本步骤" }
+      { "name": "value", "label": "选项值", "type": "text", "placeholder": "shanghai", "required": true }
     ]
   },
   "checkbox": {
@@ -73,8 +66,7 @@
     "description": "勾选或取消复选框",
     "fields": [
       { "name": "selector", "label": "选择器", "type": "text", "placeholder": "#agree", "required": true },
-      { "name": "checked", "label": "是否勾选", "type": "boolean", "required": true },
-      { "name": "description", "label": "步骤说明", "type": "text", "placeholder": "可选：说明本步骤" }
+      { "name": "checked", "label": "是否勾选", "type": "boolean", "required": true }
     ]
   },
   "scroll": {
@@ -83,8 +75,158 @@
     "fields": [
       { "name": "selector", "label": "选择器", "type": "text", "placeholder": "可选：滚动到元素" },
       { "name": "x", "label": "X 坐标", "type": "number", "placeholder": "横向滚动距离" },
-      { "name": "y", "label": "Y 坐标", "type": "number", "placeholder": "纵向滚动距离" },
-      { "name": "description", "label": "步骤说明", "type": "text", "placeholder": "可选：说明本步骤" }
+      { "name": "y", "label": "Y 坐标", "type": "number", "placeholder": "纵向滚动距离" }
+    ]
+  },
+  "hover": {
+    "label": "鼠标悬停",
+    "description": "鼠标悬停在元素上",
+    "fields": [
+      { "name": "selector", "label": "选择器", "type": "text", "placeholder": "#menu-item", "required": true }
+    ]
+  },
+  "keyboard": {
+    "label": "键盘操作",
+    "description": "按下键盘按键（如 Enter, Tab, Escape）",
+    "fields": [
+      { "name": "key", "label": "按键", "type": "text", "placeholder": "Enter / Tab / Escape / Control+c", "required": true }
+    ]
+  },
+  "set_variable": {
+    "label": "设置变量",
+    "description": "设置一个变量的值",
+    "fields": [
+      { "name": "variable", "label": "变量名", "type": "text", "placeholder": "my_var", "required": true },
+      { "name": "value", "label": "值", "type": "text", "placeholder": "变量值或 {{其他变量}}", "required": true }
+    ]
+  },
+  "if_exists": {
+    "label": "条件判断",
+    "description": "如果元素存在则标记变量为 true",
+    "fields": [
+      { "name": "selector", "label": "选择器", "type": "text", "placeholder": "#success-message", "required": true },
+      { "name": "variable", "label": "结果变量", "type": "text", "placeholder": "element_found", "required": true },
+      { "name": "timeout", "label": "检测超时(毫秒)", "type": "number", "placeholder": "可选：默认 3000" }
+    ]
+  },
+  "if_else": {
+    "label": "条件分支",
+    "description": "根据条件执行不同分支：支持变量判断、元素检测、文本比较等多种条件",
+    "container": true,
+    "containerLabel": "条件成立时执行",
+    "hasElse": true,
+    "elseLabel": "条件不成立时执行",
+    "fields": [
+      { 
+        "name": "condition_type", 
+        "label": "条件类型", 
+        "type": "select",
+        "options": [
+          { "value": "variable_truthy", "label": "变量为真" },
+          { "value": "variable_equals", "label": "变量等于值" },
+          { "value": "variable_contains", "label": "变量包含文本" },
+          { "value": "variable_greater", "label": "变量大于数值" },
+          { "value": "variable_less", "label": "变量小于数值" },
+          { "value": "element_exists", "label": "元素存在" },
+          { "value": "element_visible", "label": "元素可见" },
+          { "value": "element_text_equals", "label": "元素文本等于" },
+          { "value": "element_text_contains", "label": "元素文本包含" }
+        ],
+        "placeholder": "选择条件类型",
+        "required": true
+      },
+      { "name": "condition_variable", "label": "变量名", "type": "text", "placeholder": "用于变量类条件，如 login_success" },
+      { "name": "condition_selector", "label": "元素选择器", "type": "text", "placeholder": "用于元素类条件，如 #message" },
+      { "name": "condition_value", "label": "比较值", "type": "text", "placeholder": "期望的值，如 success 或 100" },
+      { "name": "timeout", "label": "超时时间(毫秒)", "type": "number", "placeholder": "元素检测超时，默认3000" }
+    ]
+  },
+  "assert_text": {
+    "label": "断言文本",
+    "description": "验证元素包含指定文本（失败则中断）",
+    "fields": [
+      { "name": "selector", "label": "选择器", "type": "text", "placeholder": "#message", "required": true },
+      { "name": "expected", "label": "期望文本", "type": "text", "placeholder": "包含的文本内容", "required": true }
+    ]
+  },
+  "assert_visible": {
+    "label": "断言可见",
+    "description": "验证元素可见（失败则中断）",
+    "fields": [
+      { "name": "selector", "label": "选择器", "type": "text", "placeholder": "#element", "required": true },
+      { "name": "timeout", "label": "超时时间(毫秒)", "type": "number", "placeholder": "可选：默认 5000" }
+    ]
+  },
+  "loop": {
+    "label": "循环执行",
+    "description": "重复执行内部步骤指定次数",
+    "container": true,
+    "containerLabel": "循环体",
+    "fields": [
+      { "name": "times", "label": "循环次数", "type": "number", "placeholder": "3", "required": true }
+    ]
+  },
+  "extract_all": {
+    "label": "批量提取",
+    "description": "提取所有匹配元素的文本到数组变量",
+    "fields": [
+      { "name": "selector", "label": "选择器", "type": "text", "placeholder": ".item-code", "required": true },
+      { "name": "variable", "label": "数组变量名", "type": "text", "placeholder": "all_codes", "required": true },
+      { "name": "attribute", "label": "属性名", "type": "text", "placeholder": "可选：提取属性值" }
+    ]
+  },
+  "loop_array": {
+    "label": "遍历数组",
+    "description": "遍历数组变量，每次将当前元素存入指定变量",
+    "container": true,
+    "containerLabel": "遍历体",
+    "fields": [
+      { "name": "array_variable", "label": "数组变量", "type": "text", "placeholder": "all_codes", "required": true },
+      { "name": "item_variable", "label": "元素变量", "type": "text", "placeholder": "current_code", "required": true }
+    ]
+  },
+  "new_tab": {
+    "label": "新建标签页",
+    "description": "打开新标签页并导航到URL",
+    "fields": [
+      { "name": "url", "label": "URL", "type": "text", "placeholder": "https://example.com", "required": true },
+      { "name": "tab_variable", "label": "标签变量", "type": "text", "placeholder": "可选：存储标签引用" }
+    ]
+  },
+  "switch_tab": {
+    "label": "切换标签页",
+    "description": "切换到指定索引的标签页（0为第一个）",
+    "fields": [
+      { "name": "index", "label": "标签索引", "type": "number", "placeholder": "0 = 第一个标签页", "required": true }
+    ]
+  },
+  "close_tab": {
+    "label": "关闭标签页",
+    "description": "关闭当前标签页",
+    "fields": []
+  },
+  "random_delay": {
+    "label": "随机延迟",
+    "description": "等待随机时间（模拟人类行为）",
+    "fields": [
+      { "name": "min", "label": "最小毫秒", "type": "number", "placeholder": "500", "required": true },
+      { "name": "max", "label": "最大毫秒", "type": "number", "placeholder": "2000", "required": true }
+    ]
+  },
+  "try_click": {
+    "label": "尝试点击",
+    "description": "尝试点击元素，如不存在则跳过（不报错）",
+    "fields": [
+      { "name": "selector", "label": "选择器", "type": "text", "placeholder": "#optional-button", "required": true },
+      { "name": "timeout", "label": "超时时间(毫秒)", "type": "number", "placeholder": "可选：默认 3000" }
+    ]
+  },
+  "eval_js": {
+    "label": "执行JS",
+    "description": "在页面中执行 JavaScript 代码",
+    "fields": [
+      { "name": "script", "label": "JS代码", "type": "text", "placeholder": "return document.title", "required": true },
+      { "name": "variable", "label": "结果变量", "type": "text", "placeholder": "可选：存储返回值" }
     ]
   }
 }

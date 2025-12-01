@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import subprocess
 import sys
 import threading
 from dataclasses import dataclass
@@ -9,6 +10,7 @@ from pathlib import Path
 
 from app.models.automation import AutomationFlow
 from app.services.automation.process_manager import process_manager
+from app.services.automation.error_types import classify_error, ErrorType
 
 logger = logging.getLogger(__name__)
 
@@ -108,20 +110,24 @@ class AutomationExecutor:
                                         error_text = step.get("error", "Unknown error")
                                         
                                         # Extract error type (e.g., [TIMEOUT])
-                                        error_type = ""
+                                        error_type_str = ""
                                         if error_text.startswith("["):
-                                            error_type = error_text.split("]")[0] + "]"
-                                            error_text = error_text[len(error_type):].strip()
-                                            error_types.add(error_type.strip("[]"))
+                                            error_type_str = error_text.split("]")[0] + "]"
+                                            error_text = error_text[len(error_type_str):].strip()
+                                            error_types.add(error_type_str.strip("[]"))
+                                        else:
+                                            # Classify error if no type tag present
+                                            classified = classify_error(error_text)
+                                            error_types.add(classified.value)
                                         
                                         # Get first line of error (main message)
                                         error_main = error_text.split("\n")[0].split("|")[0].strip()
                                         
                                         # Build error message with description if available
                                         if description:
-                                            error_parts.append(f"步骤 {step_num}: {description} - {error_type} {error_main}")
+                                            error_parts.append(f"步骤 {step_num}: {description} - {error_type_str} {error_main}")
                                         else:
-                                            error_parts.append(f"步骤 {step_num} ({step_type}): {error_type} {error_main}")
+                                            error_parts.append(f"步骤 {step_num} ({step_type}): {error_type_str} {error_main}")
                                     
                                     error_message = " | ".join(error_parts)
                                 else:
@@ -137,10 +143,22 @@ class AutomationExecutor:
                             status = FlowStatus.FAILED
                             result_payload = None
                             error_message = "Invalid JSON output"
+                            error_types.add(ErrorType.DSL_PARSE_ERROR.value)
+                    elif process.returncode == -15 or process.returncode == -9:
+                        # SIGTERM (-15) or SIGKILL (-9) - process was killed (manual stop)
+                        status = FlowStatus.FAILED
+                        result_payload = None
+                        error_message = "执行被手动停止"
+                        error_types.add(ErrorType.MANUAL_STOP.value)
                     else:
+                        # Other non-zero return codes
                         status = FlowStatus.FAILED
                         result_payload = None
                         error_message = stderr or "Execution failed"
+                        # Classify the error from stderr
+                        if stderr:
+                            classified = classify_error(stderr)
+                            error_types.add(classified.value)
                     
                     # Save to database
                     with session_scope() as db:
@@ -160,9 +178,35 @@ class AutomationExecutor:
                         db.commit()
                     
                     logger.info(f"Flow {flow.id} execution completed with status {status}")
+                
+                except subprocess.TimeoutExpired:
+                    # Process timeout after 5 minutes
+                    logger.error(f"Flow {flow.id} process timeout after 300 seconds")
+                    process.kill()
+                    finished_at = datetime.utcnow()
+                    duration_ms = int((finished_at - started_at).total_seconds() * 1000)
+                    
+                    try:
+                        with session_scope() as db:
+                            history = CheckinHistory(
+                                flow_id=flow.id,
+                                status=FlowStatus.FAILED,
+                                started_at=started_at,
+                                finished_at=finished_at,
+                                duration_ms=duration_ms,
+                                error_message="执行进程超时（超过5分钟）",
+                                error_types=[ErrorType.PROCESS_TIMEOUT.value],
+                            )
+                            db.add(history)
+                            db.commit()
+                    except Exception as db_error:
+                        logger.error(f"Failed to save timeout history: {db_error}")
                     
                 except Exception as e:
                     logger.error(f"Flow {flow.id} execution error: {e}")
+                    
+                    # Classify the exception
+                    classified = classify_error(e)
                     
                     # Save error to database
                     try:
@@ -174,6 +218,7 @@ class AutomationExecutor:
                                 finished_at=datetime.utcnow(),
                                 duration_ms=int((datetime.utcnow() - started_at).total_seconds() * 1000),
                                 error_message=str(e),
+                                error_types=[classified.value],
                             )
                             db.add(history)
                             db.commit()
