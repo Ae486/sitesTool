@@ -1,4 +1,4 @@
-import { CopyOutlined, DeleteOutlined, HolderOutlined, PlusOutlined } from "@ant-design/icons";
+import { CopyOutlined, DeleteOutlined, HolderOutlined, PlusOutlined, SettingOutlined } from "@ant-design/icons";
 import {
   DndContext,
   DragEndEvent,
@@ -19,6 +19,7 @@ import { CSS } from "@dnd-kit/utilities";
 import {
   Button,
   Card,
+  Collapse,
   Empty,
   Form,
   Input,
@@ -33,9 +34,10 @@ import {
 import { useDebounceFn } from "ahooks";
 import { AnimatePresence } from "framer-motion";
 import { forwardRef, memo, useCallback, useEffect, useImperativeHandle, useMemo, useState } from "react";
-import { DSL_SCHEMA, STEP_TYPE_OPTIONS, isContainerType } from "../constants/dsl";
+import { DSL_SCHEMA, STEP_TYPE_OPTIONS, isContainerType, type StepFieldDefinition } from "../constants/dsl";
 import type { FlowDSL, FlowStep } from "../types/flow";
 import { DslValidationResult, validateDslStructure } from "../utils/dsl";
+import SelectorInput from "./common/SelectorInput";
 
 const { Text } = Typography;
 
@@ -154,6 +156,13 @@ const createEmptyStep = (type: StepKey, siteUrl?: string, isFirst = false): Sort
   return base;
 };
 
+// Check if field should be visible based on showWhen condition
+const shouldShowField = (field: StepFieldDefinition, step: SortableFlowStep): boolean => {
+  if (!field.showWhen || field.showWhen.length === 0) return true;
+  const conditionType = (step as any).condition_type;
+  return field.showWhen.includes(conditionType);
+};
+
 // Memoized Field Renderer
 const StepField = memo(
   ({
@@ -164,7 +173,7 @@ const StepField = memo(
   }: {
     step: SortableFlowStep;
     stepIndex: number;
-    fieldMeta: any;
+    fieldMeta: StepFieldDefinition;
     onFieldChange: (index: number, field: string, value: unknown) => void;
   }) => {
     const value = (step as any)[fieldMeta.name];
@@ -176,6 +185,11 @@ const StepField = memo(
       validateStatus: showError ? ("error" as const) : undefined,
       help: showError ? "必填" : undefined,
     };
+
+    // Check showWhen condition for dynamic forms
+    if (!shouldShowField(fieldMeta, step)) {
+      return null;
+    }
 
     if (fieldMeta.type === "boolean") {
       return (
@@ -213,6 +227,20 @@ const StepField = memo(
               value: opt.value,
               label: opt.label,
             }))}
+          />
+        </Form.Item>
+      );
+    }
+
+    // Text input with optional auto-parser for selector fields
+    if (fieldMeta.hasAutoParser) {
+      return (
+        <Form.Item {...commonProps}>
+          <SelectorInput
+            value={typeof value === "string" ? value : ""}
+            onChange={(val) => onFieldChange(stepIndex, fieldMeta.name, val)}
+            placeholder={fieldMeta.placeholder}
+            size="middle"
           />
         </Form.Item>
       );
@@ -402,8 +430,12 @@ const NestedStepCard = memo(
           </Space>
         }
       >
-        <Space direction="vertical" style={{ width: "100%" }} size="small">
-          {definition.fields.map((field) => (
+        {/* Render field helper */}
+        {(() => {
+          const basicFields = definition.fields.filter(f => !f.advanced && shouldShowField(f, step));
+          const advancedFields = definition.fields.filter(f => f.advanced && shouldShowField(f, step));
+          
+          const renderField = (field: StepFieldDefinition) => (
             <Form.Item
               key={field.name}
               label={field.label}
@@ -436,6 +468,13 @@ const NestedStepCard = memo(
                     label: opt.label,
                   }))}
                 />
+              ) : field.hasAutoParser ? (
+                <SelectorInput
+                  value={step[field.name] || ""}
+                  onChange={(val) => onFieldChange(field.name, val)}
+                  placeholder={field.placeholder}
+                  size="small"
+                />
               ) : (
                 <Input
                   size="small"
@@ -445,8 +484,39 @@ const NestedStepCard = memo(
                 />
               )}
             </Form.Item>
-          ))}
-        </Space>
+          );
+          
+          return (
+            <Space direction="vertical" style={{ width: "100%" }} size="small">
+              {/* Basic fields */}
+              {basicFields.map(renderField)}
+              
+              {/* Description field */}
+              <Form.Item label="步骤说明" style={{ marginBottom: 8 }}>
+                <Input.TextArea
+                  size="small"
+                  rows={1}
+                  placeholder="可选：描述这个步骤"
+                  value={(step as any).description || ""}
+                  onChange={(e) => onFieldChange("description", e.target.value)}
+                />
+              </Form.Item>
+              
+              {/* Advanced fields (collapsed) */}
+              {advancedFields.length > 0 && (
+                <Collapse
+                  size="small"
+                  ghost
+                  items={[{
+                    key: "advanced",
+                    label: <Text type="secondary" style={{ fontSize: 11 }}><SettingOutlined /> 高级选项</Text>,
+                    children: advancedFields.map(renderField),
+                  }]}
+                />
+              )}
+            </Space>
+          );
+        })()}
 
         {/* Container children - recursive rendering */}
         {isContainer && (
@@ -654,17 +724,63 @@ const SortableStepItem = memo(
           }
         >
           {/* Step fields */}
-          <Space direction="vertical" style={{ width: "100%" }} size="small">
-            {definition.fields.map((field) => (
-              <StepField
-                key={field.name}
-                step={step}
-                stepIndex={index}
-                fieldMeta={field}
-                onFieldChange={onFieldChange}
-              />
-            ))}
-          </Space>
+          {(() => {
+            const basicFields = definition.fields.filter(f => !f.advanced && shouldShowField(f, step));
+            const advancedFields = definition.fields.filter(f => f.advanced && shouldShowField(f, step));
+            
+            return (
+              <Space direction="vertical" style={{ width: "100%" }} size="small">
+                {/* Basic fields */}
+                {basicFields.map((field) => (
+                  <StepField
+                    key={field.name}
+                    step={step}
+                    stepIndex={index}
+                    fieldMeta={field}
+                    onFieldChange={onFieldChange}
+                  />
+                ))}
+                
+                {/* Description field */}
+                <Form.Item 
+                  label="步骤说明" 
+                  style={{ marginBottom: 12 }}
+                >
+                  <Input.TextArea
+                    rows={1}
+                    placeholder="可选：描述这个步骤"
+                    value={(step as any).description || ""}
+                    onChange={(e) => onFieldChange(index, "description", e.target.value)}
+                  />
+                </Form.Item>
+                
+                {/* Advanced fields (collapsed) */}
+                {advancedFields.length > 0 && (
+                  <Collapse
+                    size="small"
+                    ghost
+                    items={[{
+                      key: "advanced",
+                      label: <Text type="secondary" style={{ fontSize: 12 }}><SettingOutlined /> 高级选项 ({advancedFields.length})</Text>,
+                      children: (
+                        <Space direction="vertical" style={{ width: "100%" }} size="small">
+                          {advancedFields.map((field) => (
+                            <StepField
+                              key={field.name}
+                              step={step}
+                              stepIndex={index}
+                              fieldMeta={field}
+                              onFieldChange={onFieldChange}
+                            />
+                          ))}
+                        </Space>
+                      ),
+                    }]}
+                  />
+                )}
+              </Space>
+            );
+          })()}
 
           {/* Container children */}
           {isContainer && (

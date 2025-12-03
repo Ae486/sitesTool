@@ -2,14 +2,22 @@
  * Node Properties Panel - Edit selected node's fields
  * With debounced updates for better performance
  */
-import { useCallback, useMemo, memo } from "react";
+import { useCallback, memo } from "react";
 import { Form, Input, InputNumber, Switch, Select, Button, Typography, Divider, Tag } from "antd";
 import { DeleteOutlined } from "@ant-design/icons";
 import { useDebounceFn } from "ahooks";
 import type { WorkflowNode, StepNodeData } from "../types";
-import { DSL_SCHEMA, isContainerType } from "../../../constants/dsl";
+import { DSL_SCHEMA, isContainerType, type StepFieldDefinition } from "../../../constants/dsl";
+import SelectorInput from "../../common/SelectorInput";
 
 const { Text, Title } = Typography;
+
+// Check if field should be visible based on showWhen condition
+const shouldShowField = (field: StepFieldDefinition, fields: Record<string, unknown>): boolean => {
+  if (!field.showWhen || field.showWhen.length === 0) return true;
+  const conditionType = fields.condition_type as string;
+  return field.showWhen.includes(conditionType);
+};
 
 interface NodePropertiesProps {
   node: WorkflowNode;
@@ -23,7 +31,7 @@ const FieldRenderer = memo(function FieldRenderer({
   value,
   onChange,
 }: {
-  field: { name: string; label: string; type: string; placeholder?: string; required?: boolean; options?: { value: string; label: string }[] };
+  field: StepFieldDefinition;
   value: unknown;
   onChange: (value: unknown) => void;
 }) {
@@ -61,6 +69,18 @@ const FieldRenderer = memo(function FieldRenderer({
         value={(value as string) || undefined}
         onChange={onChange}
         options={field.options}
+      />
+    );
+  }
+
+  // Selector input with auto-parser
+  if (field.hasAutoParser) {
+    return (
+      <SelectorInput
+        size="small"
+        value={typeof value === "string" ? value : ""}
+        onChange={(val) => onChange(val)}
+        placeholder={field.placeholder}
       />
     );
   }
@@ -146,25 +166,28 @@ function NodeProperties({ node, onUpdate, onDelete }: NodePropertiesProps) {
 
       {/* Fields */}
       <Form layout="vertical" size="small">
-        {schema.fields.map((field) => (
-          <Form.Item
-            key={field.name}
-            label={<span style={{ fontSize: 12 }}>{field.label}</span>}
-            required={field.required}
-            style={{ marginBottom: 10 }}
-          >
-            <FieldRenderer
-              field={field}
-              value={data.fields[field.name]}
-              onChange={(val) => handleFieldChange(field.name, val)}
-            />
-          </Form.Item>
-        ))}
+        {/* Basic fields first */}
+        {schema.fields
+          .filter(field => !field.advanced && shouldShowField(field, data.fields))
+          .map((field) => (
+            <Form.Item
+              key={field.name}
+              label={<span style={{ fontSize: 12 }}>{field.label}</span>}
+              required={field.required}
+              style={{ marginBottom: 10 }}
+            >
+              <FieldRenderer
+                field={field}
+                value={data.fields[field.name]}
+                onChange={(val) => handleFieldChange(field.name, val)}
+              />
+            </Form.Item>
+          ))}
 
         {/* Description field */}
         <Form.Item
           label={<span style={{ fontSize: 12 }}>步骤说明</span>}
-          style={{ marginBottom: 0 }}
+          style={{ marginBottom: 10 }}
         >
           <Input.TextArea
             size="small"
@@ -174,6 +197,31 @@ function NodeProperties({ node, onUpdate, onDelete }: NodePropertiesProps) {
             onChange={(e) => handleDescriptionChange(e.target.value)}
           />
         </Form.Item>
+
+        {/* Advanced fields (no collapse in canvas - enough space) */}
+        {schema.fields.filter(field => field.advanced && shouldShowField(field, data.fields)).length > 0 && (
+          <>
+            <Divider style={{ margin: "8px 0", fontSize: 11 }}>
+              <Text type="secondary">高级选项</Text>
+            </Divider>
+            {schema.fields
+              .filter(field => field.advanced && shouldShowField(field, data.fields))
+              .map((field) => (
+                <Form.Item
+                  key={field.name}
+                  label={<span style={{ fontSize: 12 }}>{field.label}</span>}
+                  required={field.required}
+                  style={{ marginBottom: 10 }}
+                >
+                  <FieldRenderer
+                    field={field}
+                    value={data.fields[field.name]}
+                    onChange={(val) => handleFieldChange(field.name, val)}
+                  />
+                </Form.Item>
+              ))}
+          </>
+        )}
       </Form>
 
       {/* Node ID (for debugging) */}

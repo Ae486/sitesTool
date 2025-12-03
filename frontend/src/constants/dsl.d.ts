@@ -10,6 +10,12 @@ export interface StepFieldDefinition {
     placeholder?: string;
     required?: boolean;
     options?: SelectOption[];
+    /** If true, this field is an advanced option (collapsed by default in list editor) */
+    advanced?: boolean;
+    /** If true, this selector field supports auto-parsing from HTML */
+    hasAutoParser?: boolean;
+    /** Only show this field when condition_type matches one of these values (for dynamic forms) */
+    showWhen?: string[];
 }
 export interface StepDefinition {
     label: string;

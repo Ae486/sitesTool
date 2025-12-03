@@ -1,14 +1,15 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { CopyOutlined, DeleteOutlined, HolderOutlined, PlusOutlined } from "@ant-design/icons";
+import { CopyOutlined, DeleteOutlined, HolderOutlined, PlusOutlined, SettingOutlined } from "@ant-design/icons";
 import { DndContext, KeyboardSensor, PointerSensor, closestCenter, useSensor, useSensors, } from "@dnd-kit/core";
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy, } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Button, Card, Empty, Form, Input, InputNumber, message, Select, Space, Switch, Tooltip, Typography, } from "antd";
+import { Button, Card, Collapse, Empty, Form, Input, InputNumber, message, Select, Space, Switch, Tooltip, Typography, } from "antd";
 import { useDebounceFn } from "ahooks";
 import { AnimatePresence } from "framer-motion";
 import { forwardRef, memo, useCallback, useEffect, useImperativeHandle, useMemo, useState } from "react";
 import { DSL_SCHEMA, STEP_TYPE_OPTIONS, isContainerType } from "../constants/dsl";
 import { validateDslStructure } from "../utils/dsl";
+import SelectorInput from "./common/SelectorInput";
 const { Text } = Typography;
 const DEFAULT_DSL = { version: 1, steps: [] };
 const DEFAULT_STEP_TYPE = (STEP_TYPE_OPTIONS[0]?.value ?? "navigate");
@@ -100,6 +101,13 @@ const createEmptyStep = (type, siteUrl, isFirst = false) => {
     });
     return base;
 };
+// Check if field should be visible based on showWhen condition
+const shouldShowField = (field, step) => {
+    if (!field.showWhen || field.showWhen.length === 0)
+        return true;
+    const conditionType = step.condition_type;
+    return field.showWhen.includes(conditionType);
+};
 // Memoized Field Renderer
 const StepField = memo(({ step, stepIndex, fieldMeta, onFieldChange, }) => {
     const value = step[fieldMeta.name];
@@ -111,6 +119,10 @@ const StepField = memo(({ step, stepIndex, fieldMeta, onFieldChange, }) => {
         validateStatus: showError ? "error" : undefined,
         help: showError ? "必填" : undefined,
     };
+    // Check showWhen condition for dynamic forms
+    if (!shouldShowField(fieldMeta, step)) {
+        return null;
+    }
     if (fieldMeta.type === "boolean") {
         return (_jsx(Form.Item, { ...commonProps, children: _jsx(Switch, { checked: Boolean(value), onChange: (checked) => onFieldChange(stepIndex, fieldMeta.name, checked) }) }));
     }
@@ -122,6 +134,10 @@ const StepField = memo(({ step, stepIndex, fieldMeta, onFieldChange, }) => {
                     value: opt.value,
                     label: opt.label,
                 })) }) }));
+    }
+    // Text input with optional auto-parser for selector fields
+    if (fieldMeta.hasAutoParser) {
+        return (_jsx(Form.Item, { ...commonProps, children: _jsx(SelectorInput, { value: typeof value === "string" ? value : "", onChange: (val) => onFieldChange(stepIndex, fieldMeta.name, val), placeholder: fieldMeta.placeholder, size: "middle" }) }));
     }
     return (_jsx(Form.Item, { ...commonProps, children: _jsx(Input, { placeholder: fieldMeta.placeholder, value: typeof value === "string" ? value : "", onChange: (e) => onFieldChange(stepIndex, fieldMeta.name, e.target.value) }) }));
 });
@@ -200,10 +216,19 @@ const NestedStepCard = memo(({ step, index, depth, onDelete, onDuplicate, onType
             marginBottom: 8,
             borderLeft: isContainer ? `3px solid ${colors?.border || "#1890ff"}` : undefined,
             background: isContainer ? colors?.bg : undefined,
-        }, title: _jsxs(Space, { size: "small", align: "center", children: [_jsxs(Text, { strong: true, style: { fontSize: 12 }, children: ["#", index + 1] }), _jsx(Tooltip, { title: definition?.description, placement: "top", children: _jsx(Select, { value: step.type, bordered: false, size: "small", style: { width: 140 }, onChange: (nextType) => onTypeChange(nextType), options: allowedOptions }) })] }), extra: _jsxs(Space, { size: "small", children: [_jsx(Tooltip, { title: "\u590D\u5236", children: _jsx(Button, { icon: _jsx(CopyOutlined, {}), size: "small", onClick: onDuplicate }) }), _jsx(Tooltip, { title: "\u5220\u9664", children: _jsx(Button, { icon: _jsx(DeleteOutlined, {}), size: "small", danger: true, onClick: onDelete }) })] }), children: [_jsx(Space, { direction: "vertical", style: { width: "100%" }, size: "small", children: definition.fields.map((field) => (_jsx(Form.Item, { label: field.label, required: field.required, style: { marginBottom: 8 }, children: field.type === "boolean" ? (_jsx(Switch, { size: "small", checked: Boolean(step[field.name]), onChange: (checked) => onFieldChange(field.name, checked) })) : field.type === "number" ? (_jsx(InputNumber, { size: "small", style: { width: "100%" }, placeholder: field.placeholder, value: step[field.name], onChange: (val) => onFieldChange(field.name, val) })) : field.type === "select" && field.options ? (_jsx(Select, { size: "small", style: { width: "100%" }, placeholder: field.placeholder, value: step[field.name] || undefined, onChange: (val) => onFieldChange(field.name, val), options: field.options.map((opt) => ({
+        }, title: _jsxs(Space, { size: "small", align: "center", children: [_jsxs(Text, { strong: true, style: { fontSize: 12 }, children: ["#", index + 1] }), _jsx(Tooltip, { title: definition?.description, placement: "top", children: _jsx(Select, { value: step.type, bordered: false, size: "small", style: { width: 140 }, onChange: (nextType) => onTypeChange(nextType), options: allowedOptions }) })] }), extra: _jsxs(Space, { size: "small", children: [_jsx(Tooltip, { title: "\u590D\u5236", children: _jsx(Button, { icon: _jsx(CopyOutlined, {}), size: "small", onClick: onDuplicate }) }), _jsx(Tooltip, { title: "\u5220\u9664", children: _jsx(Button, { icon: _jsx(DeleteOutlined, {}), size: "small", danger: true, onClick: onDelete }) })] }), children: [(() => {
+                const basicFields = definition.fields.filter(f => !f.advanced && shouldShowField(f, step));
+                const advancedFields = definition.fields.filter(f => f.advanced && shouldShowField(f, step));
+                const renderField = (field) => (_jsx(Form.Item, { label: field.label, required: field.required, style: { marginBottom: 8 }, children: field.type === "boolean" ? (_jsx(Switch, { size: "small", checked: Boolean(step[field.name]), onChange: (checked) => onFieldChange(field.name, checked) })) : field.type === "number" ? (_jsx(InputNumber, { size: "small", style: { width: "100%" }, placeholder: field.placeholder, value: step[field.name], onChange: (val) => onFieldChange(field.name, val) })) : field.type === "select" && field.options ? (_jsx(Select, { size: "small", style: { width: "100%" }, placeholder: field.placeholder, value: step[field.name] || undefined, onChange: (val) => onFieldChange(field.name, val), options: field.options.map((opt) => ({
                             value: opt.value,
                             label: opt.label,
-                        })) })) : (_jsx(Input, { size: "small", placeholder: field.placeholder, value: step[field.name] || "", onChange: (e) => onFieldChange(field.name, e.target.value) })) }, field.name))) }), isContainer && (_jsxs("div", { style: { marginTop: 12 }, children: [_jsx(Text, { strong: true, style: { fontSize: 11, color: colors?.border }, children: definition.containerLabel || "子步骤" }), renderNestedChildren(step.children), definition.hasElse && (_jsxs("div", { style: { marginTop: 12 }, children: [_jsx(Text, { strong: true, style: { fontSize: 11, color: "#fa541c" }, children: definition.elseLabel || "否则执行" }), renderNestedChildren(step.else_children, "else")] }))] }))] }));
+                        })) })) : field.hasAutoParser ? (_jsx(SelectorInput, { value: step[field.name] || "", onChange: (val) => onFieldChange(field.name, val), placeholder: field.placeholder, size: "small" })) : (_jsx(Input, { size: "small", placeholder: field.placeholder, value: step[field.name] || "", onChange: (e) => onFieldChange(field.name, e.target.value) })) }, field.name));
+                return (_jsxs(Space, { direction: "vertical", style: { width: "100%" }, size: "small", children: [basicFields.map(renderField), _jsx(Form.Item, { label: "\u6B65\u9AA4\u8BF4\u660E", style: { marginBottom: 8 }, children: _jsx(Input.TextArea, { size: "small", rows: 1, placeholder: "\u53EF\u9009\uFF1A\u63CF\u8FF0\u8FD9\u4E2A\u6B65\u9AA4", value: step.description || "", onChange: (e) => onFieldChange("description", e.target.value) }) }), advancedFields.length > 0 && (_jsx(Collapse, { size: "small", ghost: true, items: [{
+                                    key: "advanced",
+                                    label: _jsxs(Text, { type: "secondary", style: { fontSize: 11 }, children: [_jsx(SettingOutlined, {}), " \u9AD8\u7EA7\u9009\u9879"] }),
+                                    children: advancedFields.map(renderField),
+                                }] }))] }));
+            })(), isContainer && (_jsxs("div", { style: { marginTop: 12 }, children: [_jsx(Text, { strong: true, style: { fontSize: 11, color: colors?.border }, children: definition.containerLabel || "子步骤" }), renderNestedChildren(step.children), definition.hasElse && (_jsxs("div", { style: { marginTop: 12 }, children: [_jsx(Text, { strong: true, style: { fontSize: 11, color: "#fa541c" }, children: definition.elseLabel || "否则执行" }), renderNestedChildren(step.else_children, "else")] }))] }))] }));
 });
 // Sortable Step Item Component
 const SortableStepItem = memo(({ step, index, depth = 0, onDelete, onDuplicate, onTypeChange, onFieldChange, onChildrenChange, }) => {
@@ -278,7 +303,15 @@ const SortableStepItem = memo(({ step, index, depth = 0, onDelete, onDuplicate, 
                 border: isDragging ? "1px solid var(--primary-color)" : undefined,
                 borderLeft: isContainer ? `4px solid ${colors?.border}` : undefined,
                 background: isContainer ? colors?.bg : undefined,
-            }, title: _jsxs(Space, { size: "small", align: "center", children: [_jsx(Tooltip, { title: "\u62D6\u62FD\u6392\u5E8F", children: _jsx("div", { ...attributes, ...listeners, style: { cursor: "grab", display: "flex", alignItems: "center", touchAction: "none" }, children: _jsx(HolderOutlined, { style: { color: "var(--text-secondary)", fontSize: 16 } }) }) }), _jsxs(Text, { strong: true, children: ["\u6B65\u9AA4 ", index + 1] }), _jsx(Tooltip, { title: definition?.description, placement: "top", children: _jsx(Select, { value: step.type, bordered: false, style: { width: 160 }, onChange: (nextType) => onTypeChange(index, nextType), options: STEP_TYPE_OPTIONS, onMouseDown: (e) => e.stopPropagation() }) })] }), extra: _jsxs(Space, { size: "small", children: [_jsx(Tooltip, { title: "\u590D\u5236\u6B65\u9AA4", children: _jsx(Button, { icon: _jsx(CopyOutlined, {}), size: "small", onClick: () => onDuplicate(index) }) }), _jsx(Tooltip, { title: "\u5220\u9664\u6B65\u9AA4", children: _jsx(Button, { icon: _jsx(DeleteOutlined, {}), size: "small", danger: true, onClick: () => onDelete(index) }) })] }), children: [_jsx(Space, { direction: "vertical", style: { width: "100%" }, size: "small", children: definition.fields.map((field) => (_jsx(StepField, { step: step, stepIndex: index, fieldMeta: field, onFieldChange: onFieldChange }, field.name))) }), isContainer && (_jsxs("div", { style: { marginTop: 16 }, children: [_jsx(Text, { strong: true, style: { fontSize: 12, color: colors?.border }, children: definition.containerLabel || "子步骤" }), renderChildren(step.children), definition.hasElse && (_jsxs("div", { style: { marginTop: 16 }, children: [_jsx(Text, { strong: true, style: { fontSize: 12, color: "#fa541c" }, children: definition.elseLabel || "否则执行" }), renderChildren(step.else_children, "else")] }))] }))] }) }));
+            }, title: _jsxs(Space, { size: "small", align: "center", children: [_jsx(Tooltip, { title: "\u62D6\u62FD\u6392\u5E8F", children: _jsx("div", { ...attributes, ...listeners, style: { cursor: "grab", display: "flex", alignItems: "center", touchAction: "none" }, children: _jsx(HolderOutlined, { style: { color: "var(--text-secondary)", fontSize: 16 } }) }) }), _jsxs(Text, { strong: true, children: ["\u6B65\u9AA4 ", index + 1] }), _jsx(Tooltip, { title: definition?.description, placement: "top", children: _jsx(Select, { value: step.type, bordered: false, style: { width: 160 }, onChange: (nextType) => onTypeChange(index, nextType), options: STEP_TYPE_OPTIONS, onMouseDown: (e) => e.stopPropagation() }) })] }), extra: _jsxs(Space, { size: "small", children: [_jsx(Tooltip, { title: "\u590D\u5236\u6B65\u9AA4", children: _jsx(Button, { icon: _jsx(CopyOutlined, {}), size: "small", onClick: () => onDuplicate(index) }) }), _jsx(Tooltip, { title: "\u5220\u9664\u6B65\u9AA4", children: _jsx(Button, { icon: _jsx(DeleteOutlined, {}), size: "small", danger: true, onClick: () => onDelete(index) }) })] }), children: [(() => {
+                    const basicFields = definition.fields.filter(f => !f.advanced && shouldShowField(f, step));
+                    const advancedFields = definition.fields.filter(f => f.advanced && shouldShowField(f, step));
+                    return (_jsxs(Space, { direction: "vertical", style: { width: "100%" }, size: "small", children: [basicFields.map((field) => (_jsx(StepField, { step: step, stepIndex: index, fieldMeta: field, onFieldChange: onFieldChange }, field.name))), _jsx(Form.Item, { label: "\u6B65\u9AA4\u8BF4\u660E", style: { marginBottom: 12 }, children: _jsx(Input.TextArea, { rows: 1, placeholder: "\u53EF\u9009\uFF1A\u63CF\u8FF0\u8FD9\u4E2A\u6B65\u9AA4", value: step.description || "", onChange: (e) => onFieldChange(index, "description", e.target.value) }) }), advancedFields.length > 0 && (_jsx(Collapse, { size: "small", ghost: true, items: [{
+                                        key: "advanced",
+                                        label: _jsxs(Text, { type: "secondary", style: { fontSize: 12 }, children: [_jsx(SettingOutlined, {}), " \u9AD8\u7EA7\u9009\u9879 (", advancedFields.length, ")"] }),
+                                        children: (_jsx(Space, { direction: "vertical", style: { width: "100%" }, size: "small", children: advancedFields.map((field) => (_jsx(StepField, { step: step, stepIndex: index, fieldMeta: field, onFieldChange: onFieldChange }, field.name))) })),
+                                    }] }))] }));
+                })(), isContainer && (_jsxs("div", { style: { marginTop: 16 }, children: [_jsx(Text, { strong: true, style: { fontSize: 12, color: colors?.border }, children: definition.containerLabel || "子步骤" }), renderChildren(step.children), definition.hasElse && (_jsxs("div", { style: { marginTop: 16 }, children: [_jsx(Text, { strong: true, style: { fontSize: 12, color: "#fa541c" }, children: definition.elseLabel || "否则执行" }), renderChildren(step.else_children, "else")] }))] }))] }) }));
 });
 const VisualDslEditor = forwardRef(({ value, onChange, siteUrl, onValidationChange }, ref) => {
     // Initialize state with IDs
