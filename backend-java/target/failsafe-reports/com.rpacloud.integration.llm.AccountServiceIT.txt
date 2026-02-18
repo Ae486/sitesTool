@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.rpacloud.integration.llm.AccountServiceIT
+-------------------------------------------------------------------------------
+Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 30.15 s -- in com.rpacloud.integration.llm.AccountServiceIT

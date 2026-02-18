@@ -19,6 +19,7 @@ import {
   type Connection,
   type OnConnect,
   type NodeChange,
+  type EdgeChange,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { Button, Space, Tooltip, Segmented, message, Empty, Dropdown } from "antd";
@@ -43,6 +44,7 @@ import { DSL_SCHEMA } from "../../constants/dsl";
 import NodePalette from "./panels/NodePalette";
 import NodeProperties from "./panels/NodeProperties";
 import GhostNode from "./nodes/GhostNode";
+import { useUndoRedo } from "./hooks";
 
 interface WorkflowEditorProps {
   value?: FlowDSL;
@@ -54,12 +56,6 @@ interface WorkflowEditorProps {
 
 // Clipboard data structure for copy/paste
 interface ClipboardData {
-  nodes: WorkflowNode[];
-  edges: WorkflowEdge[];
-}
-
-// History state for undo/redo
-interface HistoryState {
   nodes: WorkflowNode[];
   edges: WorkflowEdge[];
 }
@@ -110,11 +106,18 @@ function WorkflowEditorInner({
   
   // Track mouse position for paste
   const mousePositionRef = useRef({ x: 0, y: 0 });
+  const skipSyncRef = useRef(false);
 
-  // Undo/Redo history
-  const [history, setHistory] = useState<HistoryState[]>([]);
-  const [historyIndex, setHistoryIndex] = useState(-1);
-  const isUndoRedo = useRef(false);
+  // Undo/Redo - using extracted hook
+  const {
+    saveToHistory: saveToHistoryRaw,
+    seedHistory,
+    undo: undoRaw,
+    redo: redoRaw,
+    canUndo,
+    canRedo,
+    isUndoRedo,
+  } = useUndoRedo(nodes, edges);
 
   // Right-click context menu state
   const [contextMenu, setContextMenu] = useState<{
@@ -141,49 +144,23 @@ function WorkflowEditorInner({
   // Debounced sync to avoid too many updates
   const { run: debouncedSync } = useDebounceFn(syncToParent, { wait: 300 });
 
-  // Save to history for undo/redo
-  const saveToHistory = useCallback(() => {
-    if (isUndoRedo.current) {
-      isUndoRedo.current = false;
-      return;
-    }
-    setHistory(prev => {
-      const newHistory = prev.slice(0, historyIndex + 1);
-      newHistory.push({ nodes: [...nodes], edges: [...edges] });
-      // Keep max 50 history items
-      if (newHistory.length > 50) newHistory.shift();
-      return newHistory;
-    });
-    setHistoryIndex(prev => Math.min(prev + 1, 49));
-  }, [nodes, edges, historyIndex]);
-
-  // Debounced history save
-  const { run: debouncedSaveHistory } = useDebounceFn(saveToHistory, { wait: 500 });
-
-  // Undo
+  // Undo wrapper - applies returned state to nodes/edges
   const undo = useCallback(() => {
-    if (historyIndex > 0) {
-      isUndoRedo.current = true;
-      const prevState = history[historyIndex - 1];
+    const prevState = undoRaw();
+    if (prevState) {
       setNodes(prevState.nodes);
       setEdges(prevState.edges);
-      setHistoryIndex(historyIndex - 1);
     }
-  }, [history, historyIndex, setNodes, setEdges]);
+  }, [undoRaw, setNodes, setEdges]);
 
-  // Redo
+  // Redo wrapper - applies returned state to nodes/edges
   const redo = useCallback(() => {
-    if (historyIndex < history.length - 1) {
-      isUndoRedo.current = true;
-      const nextState = history[historyIndex + 1];
+    const nextState = redoRaw();
+    if (nextState) {
       setNodes(nextState.nodes);
       setEdges(nextState.edges);
-      setHistoryIndex(historyIndex + 1);
     }
-  }, [history, historyIndex, setNodes, setEdges]);
-
-  const canUndo = historyIndex > 0;
-  const canRedo = historyIndex < history.length - 1;
+  }, [redoRaw, setNodes, setEdges]);
 
   // Initialize from value prop ONLY ONCE on mount
   useEffect(() => {
@@ -223,6 +200,9 @@ function WorkflowEditorInner({
       
       setNodes(finalNodes);
       setEdges(finalEdges);
+      seedHistory(finalNodes, finalEdges);
+    } else {
+      seedHistory([createStartNode()], []);
     }
     // If no value or empty steps, keep the default start node
     
@@ -234,11 +214,15 @@ function WorkflowEditorInner({
 
   // Sync to parent when nodes/edges change (after initialization)
   useEffect(() => {
+    if (skipSyncRef.current) {
+      skipSyncRef.current = false;
+      return;
+    }
     if (hasInitialized.current && !isSyncing.current) {
       debouncedSync();
-      debouncedSaveHistory();
+      saveToHistoryRaw(); // Already debounced in hook
     }
-  }, [nodes, edges, debouncedSync, debouncedSaveHistory]);
+  }, [nodes, edges, debouncedSync, saveToHistoryRaw]);
 
   // Connection validation - prevent self-connections and duplicates
   const isValidConnection = useCallback(
@@ -276,6 +260,9 @@ function WorkflowEditorInner({
   // Handle node selection
   const handleNodesChange = useCallback(
     (changes: NodeChange<WorkflowNode>[]) => {
+      if (changes.length > 0 && changes.every((c) => c.type === "select")) {
+        skipSyncRef.current = true;
+      }
       onNodesChange(changes);
       
       // Track selection
@@ -287,6 +274,16 @@ function WorkflowEditorInner({
       }
     },
     [onNodesChange]
+  );
+
+  const handleEdgesChange = useCallback(
+    (changes: EdgeChange<WorkflowEdge>[]) => {
+      if (changes.length > 0 && changes.every((c) => c.type === "select")) {
+        skipSyncRef.current = true;
+      }
+      onEdgesChange(changes);
+    },
+    [onEdgesChange]
   );
 
   // Handle background click - place ghost node or deselect
@@ -707,7 +704,7 @@ function WorkflowEditorInner({
           nodes={nodes}
           edges={edges}
           onNodesChange={handleNodesChange}
-          onEdgesChange={onEdgesChange}
+          onEdgesChange={handleEdgesChange}
           onConnect={onConnect}
           onPaneClick={onPaneClick}
           onDragOver={onDragOver}

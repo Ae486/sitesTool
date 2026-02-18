@@ -12,6 +12,9 @@ export interface HistoryRecord {
   error_message: string | null;
   screenshot_files: string[];
   error_types: string[];
+  execution_id?: string | null;
+  primary_error_type?: string | null;
+  failed_step_summary?: string | null;
   created_at: string;
   updated_at: string;
 }

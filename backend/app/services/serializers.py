@@ -3,6 +3,7 @@ import json
 from app.models.automation import AutomationFlow
 from app.models.checkin import CheckinHistory
 from app.schemas.flow import AutomationFlowRead, CheckinHistoryRead
+from app.services.automation.history_observability import compute_observability_fields
 
 
 def flow_to_schema(flow: AutomationFlow) -> AutomationFlowRead:
@@ -29,6 +30,11 @@ def flow_to_schema(flow: AutomationFlow) -> AutomationFlowRead:
 
 
 def history_to_schema(history: CheckinHistory) -> CheckinHistoryRead:
+    execution_id, primary_error_type, failed_step_summary = compute_observability_fields(
+        result_payload=history.result_payload,
+        error_types=history.error_types or [],
+        error_message=history.error_message,
+    )
     return CheckinHistoryRead(
         id=history.id,
         flow_id=history.flow_id,
@@ -41,6 +47,9 @@ def history_to_schema(history: CheckinHistory) -> CheckinHistoryRead:
         error_message=history.error_message,
         screenshot_files=history.screenshot_files or [],
         error_types=history.error_types or [],
+        execution_id=execution_id,
+        primary_error_type=primary_error_type,
+        failed_step_summary=failed_step_summary,
         created_at=history.created_at,
         updated_at=history.updated_at,
     )

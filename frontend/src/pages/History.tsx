@@ -14,6 +14,7 @@ import {
   Table,
   Tag,
   Timeline,
+  Tooltip,
   Typography,
   message,
 } from "antd";
@@ -44,7 +45,7 @@ const HistoryPage = () => {
 
   const { data: flowsData } = useQuery({
     queryKey: ["flows"],
-    queryFn: () => import("../api/flows").then((m) => m.fetchFlows()),
+    queryFn: () => fetchFlows(),
   });
 
   const deleteMutation = useMutation({
@@ -112,6 +113,14 @@ const HistoryPage = () => {
     return `${(ms / 1000).toFixed(2)}s`;
   };
 
+  const normalizeSummary = (value: string) => value.split("\n")[0]?.trim() ?? value;
+
+  const truncateByChars = (value: string, maxChars: number) => {
+    const normalized = normalizeSummary(value);
+    if (normalized.length <= maxChars) return normalized;
+    return `${normalized.slice(0, maxChars)}...`;
+  };
+
   const formatDateTime = (dateStr: string) => {
     const date = new Date(dateStr);
     return date.toLocaleString("zh-CN", {
@@ -165,6 +174,20 @@ const HistoryPage = () => {
       width: 100,
     },
     {
+      title: "执行ID",
+      dataIndex: "execution_id",
+      key: "execution_id",
+      render: (value: string | null | undefined) =>
+        value ? (
+          <Text code style={{ fontSize: 12 }}>
+            {value}
+          </Text>
+        ) : (
+          <Text type="secondary">-</Text>
+        ),
+      width: 140,
+    },
+    {
       title: "错误类型",
       dataIndex: "error_types",
       key: "error_types",
@@ -181,6 +204,19 @@ const HistoryPage = () => {
           <Text type="secondary">-</Text>
         ),
       width: 200,
+    },
+    {
+      title: "失败摘要",
+      dataIndex: "failed_step_summary",
+      key: "failed_step_summary",
+      render: (value: string | null | undefined) =>
+        value ? (
+          <Tooltip title={value} placement="topLeft">
+            <Text type="secondary">{truncateByChars(value, 60)}</Text>
+          </Tooltip>
+        ) : (
+          <Text type="secondary">-</Text>
+        ),
     },
     {
       title: "操作",
@@ -301,6 +337,31 @@ const HistoryPage = () => {
                         </Tag>
                       ))}
                     </Space>
+                  ) : (
+                    <Text type="secondary">-</Text>
+                  )}
+                </Descriptions.Item>
+                <Descriptions.Item label="执行ID" span={2}>
+                  {selectedHistory.execution_id ? (
+                    <Text code style={{ fontSize: 12 }}>
+                      {selectedHistory.execution_id}
+                    </Text>
+                  ) : (
+                    <Text type="secondary">-</Text>
+                  )}
+                </Descriptions.Item>
+                <Descriptions.Item label="主错误类型">
+                  {selectedHistory.primary_error_type ? (
+                    <Tag color="volcano">{selectedHistory.primary_error_type}</Tag>
+                  ) : (
+                    <Text type="secondary">-</Text>
+                  )}
+                </Descriptions.Item>
+                <Descriptions.Item label="失败摘要">
+                  {selectedHistory.failed_step_summary ? (
+                    <Tooltip title={selectedHistory.failed_step_summary} placement="topLeft">
+                      <Text type="secondary">{truncateByChars(selectedHistory.failed_step_summary, 200)}</Text>
+                    </Tooltip>
                   ) : (
                     <Text type="secondary">-</Text>
                   )}

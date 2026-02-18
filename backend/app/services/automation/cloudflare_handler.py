@@ -1,10 +1,9 @@
 """Cloudflare challenge detection and handling."""
 import asyncio
 import logging
-import random
 from typing import Optional
 
-from playwright.async_api import Page, Frame
+from patchright.async_api import Page
 
 logger = logging.getLogger(__name__)
 
@@ -188,70 +187,18 @@ class CloudflareHandler:
         return "page"
     
     async def _handle_turnstile(self, page: Page, timeout: int) -> bool:
-        """Handle Turnstile checkbox challenge."""
-        logger.info("🔲 Attempting to solve Turnstile checkbox...")
-        
+        """Wait for Turnstile to auto-resolve (Patchright makes browser appear human)."""
+        logger.info("🔲 Waiting for Turnstile auto-resolution (Patchright anti-detect active)...")
+
         start_time = asyncio.get_event_loop().time()
-        
+
         while (asyncio.get_event_loop().time() - start_time) * 1000 < timeout:
-            try:
-                # Find Turnstile iframe
-                iframe_element = None
-                for selector in ["iframe[src*='challenges.cloudflare.com']", "iframe[src*='turnstile']"]:
-                    iframe_element = await page.query_selector(selector)
-                    if iframe_element:
-                        break
-                
-                if not iframe_element:
-                    # No iframe found, check if challenge is gone
-                    if await self._detect_challenge_type(page) == "none":
-                        logger.info("✅ Turnstile challenge resolved!")
-                        return True
-                    await asyncio.sleep(0.5)
-                    continue
-                
-                # Get iframe content
-                frame: Frame = await iframe_element.content_frame()
-                if not frame:
-                    await asyncio.sleep(0.5)
-                    continue
-                
-                # Try to find and click the checkbox
-                checkbox_selectors = [
-                    "input[type='checkbox']",
-                    ".cf-turnstile-checkbox",
-                    "[role='checkbox']",
-                    "label",  # Sometimes the label is clickable
-                ]
-                
-                for selector in checkbox_selectors:
-                    try:
-                        checkbox = await frame.query_selector(selector)
-                        if checkbox:
-                            is_visible = await checkbox.is_visible()
-                            if is_visible:
-                                # Human-like click with small delay
-                                await asyncio.sleep(random.uniform(0.3, 0.8))
-                                await checkbox.click()
-                                logger.info(f"✅ Clicked Turnstile checkbox ({selector})")
-                                
-                                # Wait for challenge to process
-                                await asyncio.sleep(2)
-                                
-                                # Verify if solved
-                                if await self._detect_challenge_type(page) == "none":
-                                    return True
-                                break
-                    except Exception as e:
-                        logger.debug(f"Checkbox click attempt failed: {e}")
-                
-                await asyncio.sleep(1)
-                
-            except Exception as e:
-                logger.debug(f"Turnstile handling error: {e}")
-                await asyncio.sleep(1)
-        
-        # Final check
+            if await self._detect_challenge_type(page) == "none":
+                logger.info("✅ Turnstile challenge auto-resolved!")
+                return True
+            await asyncio.sleep(1)
+
+        logger.warning(f"⚠️ Turnstile not resolved within {timeout}ms")
         return await self._detect_challenge_type(page) == "none"
     
     async def _handle_page_challenge(self, page: Page, timeout: int) -> bool:

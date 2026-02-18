@@ -1,0 +1,31 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=MYSQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    database-platform: org.hibernate.dialect.H2Dialect
+  flyway:
+    enabled: false
+  data:
+    redis:
+      host: localhost
+      port: 6379
+  quartz:
+    job-store-type: memory
+
+rpa:
+  auth:
+    disabled: false
+    secret-key: test-secret-key-at-least-32-characters-long!!
+    token-expire-minutes: 60
+  execution:
+    process-timeout-seconds: 30
+    worker-pool-core: 2
+    worker-pool-max: 4
+    queue-capacity: 10
+  cors:
+    origins: "*"

@@ -102,7 +102,7 @@ function generateSelectorFromElement(el: Element): { selector: string; confidenc
   const ariaLabel = el.getAttribute('aria-label');
   if (ariaLabel) {
     return { 
-      selector: `${tag}[aria-label="${escapeAttrValue(ariaLabel)}"]`, 
+      selector: `[aria-label="${escapeAttrValue(ariaLabel)}"]`, 
       confidence: 'high',
       reason: 'aria-label 通常描述特定功能'
     };
@@ -183,8 +183,14 @@ function isHtmlElement(input: string): boolean {
  */
 function isCssSelector(input: string): boolean {
   const trimmed = input.trim();
-  // Starts with #, ., [, or tag name followed by selector chars
-  return /^[#.\[]/.test(trimmed) || /^[a-z]+(\[|#|\.|\s|>|$)/i.test(trimmed);
+  if (/^[#.\[]/.test(trimmed)) return true;
+  if (/[>~+:]/.test(trimmed)) return true;
+  if (/[#.]/.test(trimmed)) return true;
+  if (trimmed.includes("[")) return true;
+  if (/\s/.test(trimmed)) return true;
+  if (/^[a-z][a-z0-9-]*$/.test(trimmed)) return true;
+
+  return false;
 }
 
 /**

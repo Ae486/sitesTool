@@ -11,6 +11,11 @@ export interface LoginRequest {
   password: string;
 }
 
+export interface AuthStatus {
+  auth_disabled: boolean;
+  dev_user?: User;
+}
+
 export const login = async (payload: LoginRequest): Promise<TokenResponse> => {
   const form = new URLSearchParams();
   form.append("username", payload.username);
@@ -24,5 +29,10 @@ export const login = async (payload: LoginRequest): Promise<TokenResponse> => {
 export const fetchCurrentUser = async (token?: string): Promise<User> => {
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
   const { data } = await api.get<User>("/auth/me", { headers });
+  return data;
+};
+
+export const fetchAuthStatus = async (): Promise<AuthStatus> => {
+  const { data } = await api.get<AuthStatus>("/auth/status");
   return data;
 };

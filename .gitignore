@@ -24,3 +24,10 @@ Thumbs.db
 
 *.md
 !README.md
+
+# agents
+.factory
+.kiro
+.snow
+.windsurf
+.ace-tool/

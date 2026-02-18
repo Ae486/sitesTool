@@ -6,7 +6,7 @@ CDP共享模式执行器
 import asyncio
 import logging
 from typing import Optional, Tuple
-from playwright.async_api import Browser, BrowserContext, Page, async_playwright
+from patchright.async_api import Browser, BrowserContext, Page, async_playwright
 
 from .browser_launcher import is_cdp_ready
 from .dsl_parser import ParsedStep

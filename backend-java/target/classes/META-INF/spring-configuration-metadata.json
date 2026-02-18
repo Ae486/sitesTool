@@ -1,0 +1,132 @@
+{
+  "groups": [
+    {
+      "name": "rpa",
+      "type": "com.rpacloud.common.config.RpaProperties",
+      "sourceType": "com.rpacloud.common.config.RpaProperties"
+    },
+    {
+      "name": "rpa.auth",
+      "type": "com.rpacloud.common.config.RpaProperties$Auth",
+      "sourceType": "com.rpacloud.common.config.RpaProperties",
+      "sourceMethod": "getAuth()"
+    },
+    {
+      "name": "rpa.cors",
+      "type": "com.rpacloud.common.config.RpaProperties$Cors",
+      "sourceType": "com.rpacloud.common.config.RpaProperties",
+      "sourceMethod": "getCors()"
+    },
+    {
+      "name": "rpa.execution",
+      "type": "com.rpacloud.common.config.RpaProperties$Execution",
+      "sourceType": "com.rpacloud.common.config.RpaProperties",
+      "sourceMethod": "getExecution()"
+    },
+    {
+      "name": "rpa.llm",
+      "type": "com.rpacloud.common.config.RpaProperties$Llm",
+      "sourceType": "com.rpacloud.common.config.RpaProperties",
+      "sourceMethod": "getLlm()"
+    },
+    {
+      "name": "rpa.proxy",
+      "type": "com.rpacloud.common.config.RpaProperties$Proxy",
+      "sourceType": "com.rpacloud.common.config.RpaProperties",
+      "sourceMethod": "getProxy()"
+    }
+  ],
+  "properties": [
+    {
+      "name": "rpa.auth.disabled",
+      "type": "java.lang.Boolean",
+      "sourceType": "com.rpacloud.common.config.RpaProperties$Auth",
+      "defaultValue": false
+    },
+    {
+      "name": "rpa.auth.secret-key",
+      "type": "java.lang.String",
+      "sourceType": "com.rpacloud.common.config.RpaProperties$Auth",
+      "defaultValue": "change-me-in-production-at-least-32-chars!!"
+    },
+    {
+      "name": "rpa.auth.token-expire-minutes",
+      "type": "java.lang.Integer",
+      "sourceType": "com.rpacloud.common.config.RpaProperties$Auth",
+      "defaultValue": 60
+    },
+    {
+      "name": "rpa.cors.origins",
+      "type": "java.lang.String",
+      "sourceType": "com.rpacloud.common.config.RpaProperties$Cors",
+      "defaultValue": "http:\/\/localhost:5173"
+    },
+    {
+      "name": "rpa.execution.process-timeout-seconds",
+      "type": "java.lang.Integer",
+      "sourceType": "com.rpacloud.common.config.RpaProperties$Execution",
+      "defaultValue": 300
+    },
+    {
+      "name": "rpa.execution.queue-capacity",
+      "type": "java.lang.Integer",
+      "sourceType": "com.rpacloud.common.config.RpaProperties$Execution",
+      "defaultValue": 100
+    },
+    {
+      "name": "rpa.execution.worker-pool-core",
+      "type": "java.lang.Integer",
+      "sourceType": "com.rpacloud.common.config.RpaProperties$Execution",
+      "defaultValue": 4
+    },
+    {
+      "name": "rpa.execution.worker-pool-max",
+      "type": "java.lang.Integer",
+      "sourceType": "com.rpacloud.common.config.RpaProperties$Execution",
+      "defaultValue": 8
+    },
+    {
+      "name": "rpa.llm.default-rpm",
+      "type": "java.lang.Integer",
+      "sourceType": "com.rpacloud.common.config.RpaProperties$Llm",
+      "defaultValue": 60
+    },
+    {
+      "name": "rpa.llm.internal-token-secret",
+      "type": "java.lang.String",
+      "sourceType": "com.rpacloud.common.config.RpaProperties$Llm",
+      "defaultValue": "change-me-internal-secret-at-least-32-chars!!"
+    },
+    {
+      "name": "rpa.llm.pre-freeze-padding",
+      "type": "java.lang.Integer",
+      "sourceType": "com.rpacloud.common.config.RpaProperties$Llm",
+      "defaultValue": 2000
+    },
+    {
+      "name": "rpa.proxy.cooldown-seconds",
+      "type": "java.lang.Integer",
+      "sourceType": "com.rpacloud.common.config.RpaProperties$Proxy",
+      "defaultValue": 60
+    },
+    {
+      "name": "rpa.proxy.health-check-interval-ms",
+      "type": "java.lang.Long",
+      "sourceType": "com.rpacloud.common.config.RpaProperties$Proxy",
+      "defaultValue": 300000
+    },
+    {
+      "name": "rpa.proxy.max-concurrent-checks",
+      "type": "java.lang.Integer",
+      "sourceType": "com.rpacloud.common.config.RpaProperties$Proxy",
+      "defaultValue": 10
+    },
+    {
+      "name": "rpa.proxy.proxy-provider-url",
+      "type": "java.lang.String",
+      "sourceType": "com.rpacloud.common.config.RpaProperties$Proxy",
+      "defaultValue": "https:\/\/proxy.scdn.io\/api\/get_proxy.php"
+    }
+  ],
+  "hints": []
+}

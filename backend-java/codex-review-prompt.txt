@@ -1,0 +1,53 @@
+Review Phase 7 (LLM Integration MVP) implementation of the RPA-Cloud Java backend. Provide a comprehensive architectural review covering:
+
+1. Functional Completeness - Are all LLM integration features properly implemented? Any missing edge cases?
+2. Coupling - Evaluate coupling between modules (llm, execution, common). Are dependencies well-managed?
+3. Learnability - Is the code easy to understand for new developers? Naming, structure, documentation?
+4. Maintainability - Code organization, testability, extensibility for future changes?
+5. Security - Internal token mechanism, rate limiting, API key handling. Any vulnerabilities?
+6. Transaction Correctness - AccountService freeze/settle/refund with pessimistic locking. Any race conditions?
+7. Error Handling - Are failure modes properly handled? Recovery paths?
+
+Read these source files in the project workspace and review them thoroughly:
+
+Source files in src/main/java/com/rpacloud/llm/:
+- service/LlmGatewayService.java (Core LLM routing via Spring AI ChatClient)
+- service/InternalTokenProvider.java (Separate JWT for subprocess auth)
+- service/AccountService.java (Token accounting with pessimistic locking: freeze/settle/refund/charge)
+- service/RateLimiter.java (interface)
+- service/InMemoryRateLimiter.java (ConcurrentHashMap sliding window, @Profile("!enterprise"))
+- service/RedisRateLimiter.java (Redis Lua script counter, @Profile("enterprise"))
+- service/DslGenerationService.java (NL to DSL generation using ChatClient + system prompt)
+- controller/InternalLlmController.java (POST /internal/llm/chat - subprocess callback endpoint)
+- controller/LlmController.java (POST /api/llm/generate-dsl - user-facing DSL generation)
+- controller/AccountController.java (GET /api/account, GET /api/account/transactions, POST /api/account/charge)
+- entity/Account.java (JPA entity: userId, balance, frozen)
+- entity/Transaction.java (JPA entity: userId, executionId, type, amount, balanceAfter, idempotencyKey)
+- repository/AccountRepository.java (findByUserIdForUpdate with @Lock PESSIMISTIC_WRITE)
+- repository/TransactionRepository.java (existsByIdempotencyKey)
+- dto/LlmChatRequest.java, LlmChatResponse.java, InternalLlmRequest.java, GenerateDslRequest.java, GenerateDslResponse.java
+
+Modified files in src/main/java/com/rpacloud/execution/:
+- process/AutomationExecutor.java (added InternalTokenProvider, --internal-api-url, --internal-token to subprocess command)
+- engine/RunAutomation.java (parseArgs extended with --internal-api-url, --internal-token)
+- engine/PlaywrightExecutor.java (added LlmCallHandler dispatch for LLM_CALL step type)
+- engine/handlers/LlmCallHandler.java (java.net.http.HttpClient calling /internal/llm/chat from subprocess)
+- engine/StepType.java (added LLM_CALL enum value)
+
+Config files:
+- src/main/java/com/rpacloud/common/config/RpaProperties.java (added Llm inner class)
+- src/main/java/com/rpacloud/common/config/SecurityConfig.java (added /internal/** permitAll)
+- src/main/java/com/rpacloud/common/exception/ErrorCode.java (added INSUFFICIENT_BALANCE, LLM_SERVICE_ERROR, LLM_QUOTA_EXCEEDED, INVALID_INTERNAL_TOKEN)
+- src/main/resources/application.yml (spring.ai.openai config, rpa.llm config, flyway out-of-order)
+- src/main/resources/db/migration/V4__llm_billing_tables.sql
+
+Key architecture decisions to evaluate:
+1. Subprocess cannot access Spring context; uses java.net.http.HttpClient to HTTP-callback main process
+2. Internal token (separate from user JWT) authenticates subprocess->main process calls
+3. Rate limiting: InMemoryRateLimiter for open-source, RedisRateLimiter for enterprise (@Profile switching)
+4. AccountService billing is NOT yet integrated into InternalLlmController (freeze/settle/refund exist but not called)
+5. UserId hardcoded to 1L throughout (open-source single-user mode)
+6. InternalToken is always generated and passed to subprocess, even when DSL has no llm_call steps
+7. SecurityConfig permits /internal/** without any auth filter - relies solely on internal token validation in controller
+
+Provide specific, actionable findings with severity levels (Critical/High/Medium/Low). Focus on real architectural issues, not style preferences.

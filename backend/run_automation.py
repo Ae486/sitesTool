@@ -2,6 +2,7 @@
 import asyncio
 import json
 import sys
+import uuid
 
 # Critical fix for Windows + Python 3.12 + Playwright
 if sys.platform == "win32":
@@ -15,6 +16,7 @@ from app.services.automation.playwright_executor import executor as pw_executor
 async def run_flow(
     flow_id: int,
     dsl_json: str,
+    execution_id: str,
     use_cdp_mode: bool = False,
     cdp_port: int = 9222,
     cdp_user_data_dir: str = None,
@@ -54,6 +56,7 @@ async def run_flow(
         step_results.append(step_dict)
     
     return {
+        "execution_id": execution_id,
         "status": result.status,
         "steps_executed": result.steps_executed,
         "steps_failed": result.steps_failed,
@@ -81,8 +84,11 @@ def main():
                        help="CDP debug port (default 9222)")
     parser.add_argument("--cdp-user-data-dir", type=str, default=None,
                        help="Custom browser user data directory (uses default profile if not specified)")
+    parser.add_argument("--execution-id", type=str, default=None)
     
     args = parser.parse_args()
+
+    execution_id = args.execution_id or uuid.uuid4().hex
     
     # Determine headless mode
     headless = args.headless or not args.headed  # Default to headless
@@ -103,6 +109,7 @@ def main():
                 run_flow(
                     args.flow_id,
                     args.dsl_json,
+                    execution_id,
                     use_cdp_mode=args.use_cdp_mode,
                     cdp_port=args.cdp_port,
                     cdp_user_data_dir=args.cdp_user_data_dir,
@@ -115,7 +122,17 @@ def main():
     except Exception as e:
         import traceback
         error_detail = traceback.format_exc()
-        print(json.dumps({"status": "failed", "message": str(e), "detail": error_detail}), file=sys.stderr)
+        print(
+            json.dumps(
+                {
+                    "status": "failed",
+                    "execution_id": locals().get("execution_id"),
+                    "message": str(e),
+                    "detail": error_detail,
+                }
+            ),
+            file=sys.stderr,
+        )
         sys.exit(1)
 
 

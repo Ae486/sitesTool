@@ -7,9 +7,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from playwright.sync_api import sync_playwright, Browser, Page
+from patchright.sync_api import sync_playwright, Browser, Page
 
 from app.services.automation.dsl_parser import ParsedStep, StepType
+from app.services.automation.variable_resolver import resolve_variables
 
 logger = logging.getLogger(__name__)
 
@@ -307,16 +308,7 @@ class SyncPlaywrightExecutor:
 
     def _resolve_variables(self, value: str, variables: dict) -> str:
         """Resolve variable placeholders in string values."""
-        if not isinstance(value, str):
-            return value
-
-        # Replace {{variable_name}} with actual values
-        for var_name, var_value in variables.items():
-            placeholder = f"{{{{{var_name}}}}}"
-            if placeholder in value:
-                value = value.replace(placeholder, str(var_value))
-
-        return value
+        return resolve_variables(value, variables, stringify_non_str=False)
 
 
 # Singleton instance

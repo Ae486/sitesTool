@@ -292,8 +292,8 @@ function WorkflowEditorInner({ value, onChange, onModeChange, siteUrl, readOnly 
         // Convert screen position to flow position
         const bounds = reactFlowWrapper.current.getBoundingClientRect();
         const flowPosition = screenToFlowPosition({
-            x: mousePositionRef.current.x,
-            y: mousePositionRef.current.y,
+            x: mousePositionRef.current,
+            y: mousePositionRef.current,
         });
         // Calculate offset from the first node's position
         const firstNode = clipboard.nodes[0];

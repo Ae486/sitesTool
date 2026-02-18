@@ -16,6 +16,22 @@ class Settings(BaseSettings):
     data_dir: Path = Path("./data")
     disable_auth: bool = False  # 设置为 True 可禁用认证（仅开发环境）
 
+    # CORS 配置：逗号分隔的允许域名列表
+    # 本地开发默认允许常用端口，生产环境请设置具体域名
+    cors_origins: str = "http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173"
+
+    automation_max_running_flows: int = 0
+    automation_process_timeout_seconds: int = 300
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        """解析 CORS 允许域名列表"""
+        if self.environment == "local":
+            # 本地开发环境：允许所有来源（方便调试）
+            return ["*"]
+        # 生产环境：只允许配置的域名
+        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
 

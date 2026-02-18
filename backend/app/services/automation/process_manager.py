@@ -25,6 +25,7 @@ class ProcessManager:
 
     def __init__(self):
         self._processes: Dict[int, RunningProcess] = {}
+        self._stop_requests: set[int] = set()
 
     def start_process(
         self, flow_id: int, command: list[str], cwd: str
@@ -54,6 +55,7 @@ class ProcessManager:
             text=True,
             cwd=cwd,
         )
+        self._stop_requests.discard(flow_id)
 
         # Track process
         self._processes[flow_id] = RunningProcess(
@@ -82,6 +84,7 @@ class ProcessManager:
 
         running_process = self._processes[flow_id]
         process = running_process.process
+        self._stop_requests.add(flow_id)
 
         try:
             # Try graceful termination first
@@ -104,6 +107,14 @@ class ProcessManager:
         finally:
             # Remove from tracking
             del self._processes[flow_id]
+
+    def was_stop_requested(self, flow_id: int) -> bool:
+        """Whether a stop was requested for this flow_id."""
+        return flow_id in self._stop_requests
+
+    def clear_stop_request(self, flow_id: int) -> None:
+        """Clear stop request marker (call after completion is recorded)."""
+        self._stop_requests.discard(flow_id)
 
     def is_running(self, flow_id: int) -> bool:
         """Check if a flow is currently running."""

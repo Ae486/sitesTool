@@ -61,6 +61,9 @@ class CheckinHistoryRead(BaseModel):
     error_message: Optional[str]
     screenshot_files: list[str] = Field(default_factory=list)
     error_types: list[str] = Field(default_factory=list)
+    execution_id: Optional[str] = None
+    primary_error_type: Optional[str] = None
+    failed_step_summary: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 

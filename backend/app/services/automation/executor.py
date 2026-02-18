@@ -5,12 +5,15 @@ import logging
 import subprocess
 import sys
 import threading
+import uuid
 from dataclasses import dataclass
 from pathlib import Path
 
 from app.models.automation import AutomationFlow
+from app.core.config import settings
 from app.services.automation.process_manager import process_manager
 from app.services.automation.error_types import classify_error, ErrorType
+from app.services.automation.process_output_parser import extract_json_payload
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +22,7 @@ logger = logging.getLogger(__name__)
 class ExecutionResult:
     status: str
     message: str | None = None
-    execution_id: int | None = None
+    execution_id: str | None = None
 
 
 class AutomationExecutor:
@@ -42,8 +45,17 @@ class AutomationExecutor:
                     status="running",
                     message="Flow is already running",
                 )
+            if settings.automation_max_running_flows and settings.automation_max_running_flows > 0:
+                running_count = len(process_manager.get_running_flows())
+                if running_count >= settings.automation_max_running_flows:
+                    return ExecutionResult(
+                        status="running",
+                        message="System busy: too many running flows",
+                    )
 
             logger.info(f"Triggering flow {flow.id} in separate process")
+
+            execution_id = uuid.uuid4().hex
 
             # Get the path to the run_automation.py script
             backend_dir = Path(__file__).resolve().parent.parent.parent.parent
@@ -58,6 +70,8 @@ class AutomationExecutor:
                 "--headless" if flow.headless else "--headed",
                 "--browser",
                 flow.browser_type,
+                "--execution-id",
+                execution_id,
             ]
 
             # Add browser path if custom
@@ -84,81 +98,108 @@ class AutomationExecutor:
                 started_at = datetime.utcnow()
                 
                 try:
-                    stdout, stderr = process.communicate(timeout=300)
+                    stdout, stderr = process.communicate(timeout=settings.automation_process_timeout_seconds)
                     finished_at = datetime.utcnow()
                     duration_ms = int((finished_at - started_at).total_seconds() * 1000)
                     
                     # Parse result
                     screenshot_files: list[str] = []
                     error_types: set[str] = set()
-                    if process.returncode == 0:
-                        try:
-                            result = json.loads(stdout)
-                            status = FlowStatus.SUCCESS if result.get("status") == "success" else FlowStatus.FAILED
-                            result_payload = stdout
-                            
-                            # Generate detailed error message from failed steps
-                            step_results = result.get("step_results", [])
-                            if status == FlowStatus.FAILED:
-                                failed_steps = [s for s in step_results if not s.get("success")]
-                                if failed_steps:
-                                    error_parts = []
-                                    for step in failed_steps:
-                                        step_num = step.get("step_index", 0) + 1
-                                        step_type = step.get("step_type", "unknown")
-                                        description = step.get("description", "")
-                                        error_text = step.get("error", "Unknown error")
-                                        
-                                        # Extract error type (e.g., [TIMEOUT])
-                                        error_type_str = ""
-                                        if error_text.startswith("["):
-                                            error_type_str = error_text.split("]")[0] + "]"
-                                            error_text = error_text[len(error_type_str):].strip()
-                                            error_types.add(error_type_str.strip("[]"))
-                                        else:
-                                            # Classify error if no type tag present
-                                            classified = classify_error(error_text)
-                                            error_types.add(classified.value)
-                                        
-                                        # Get first line of error (main message)
-                                        error_main = error_text.split("\n")[0].split("|")[0].strip()
-                                        
-                                        # Build error message with description if available
-                                        if description:
-                                            error_parts.append(f"步骤 {step_num}: {description} - {error_type_str} {error_main}")
-                                        else:
-                                            error_parts.append(f"步骤 {step_num} ({step_type}): {error_type_str} {error_main}")
-                                    
-                                    error_message = " | ".join(error_parts)
-                                else:
-                                    error_message = result.get("message", "执行失败")
-                            else:
-                                error_message = None
-                            
-                            # Extract screenshot paths from step results
-                            paths = [s.get("screenshot_path") for s in step_results if s.get("screenshot_path")]
-                            if paths:
-                                screenshot_files = [Path(p).name for p in paths if p]
-                        except json.JSONDecodeError:
-                            status = FlowStatus.FAILED
-                            result_payload = None
-                            error_message = "Invalid JSON output"
-                            error_types.add(ErrorType.DSL_PARSE_ERROR.value)
-                    elif process.returncode == -15 or process.returncode == -9:
-                        # SIGTERM (-15) or SIGKILL (-9) - process was killed (manual stop)
+                    stop_requested = process_manager.was_stop_requested(flow.id)
+
+                    if stop_requested:
                         status = FlowStatus.FAILED
-                        result_payload = None
+                        result_payload = json.dumps(
+                            {
+                                "status": "failed",
+                                "execution_id": execution_id,
+                                "message": "执行被手动停止",
+                            },
+                            ensure_ascii=False,
+                        )
                         error_message = "执行被手动停止"
                         error_types.add(ErrorType.MANUAL_STOP.value)
+
+                    elif process.returncode == 0:
+                        result = extract_json_payload(stdout)
+                        if not result:
+                            raise json.JSONDecodeError("No JSON payload", stdout, 0)
+
+                        if not result.get("execution_id"):
+                            result["execution_id"] = execution_id
+
+                        status = (
+                            FlowStatus.SUCCESS
+                            if result.get("status") == "success"
+                            else FlowStatus.FAILED
+                        )
+                        result_payload = json.dumps(result, ensure_ascii=False)
+                        
+                        # Generate detailed error message from failed steps
+                        step_results = result.get("step_results", [])
+                        if status == FlowStatus.FAILED:
+                            failed_steps = [s for s in step_results if not s.get("success")]
+                            if failed_steps:
+                                error_parts = []
+                                for step in failed_steps:
+                                    step_num = step.get("step_index", 0) + 1
+                                    step_type = step.get("step_type", "unknown")
+                                    description = step.get("description", "")
+                                    error_text = step.get("error", "Unknown error")
+                                    
+                                    # Extract error type (e.g., [TIMEOUT])
+                                    error_type_str = ""
+                                    if error_text.startswith("["):
+                                        error_type_str = error_text.split("]")[0] + "]"
+                                        error_text = error_text[len(error_type_str):].strip()
+                                        error_types.add(error_type_str.strip("[]"))
+                                    else:
+                                        # Classify error if no type tag present
+                                        classified = classify_error(error_text)
+                                        error_types.add(classified.value)
+                                    
+                                    # Get first line of error (main message)
+                                    error_main = error_text.split("\n")[0].split("|")[0].strip()
+                                    
+                                    # Build error message with description if available
+                                    if description:
+                                        error_parts.append(f"步骤 {step_num}: {description} - {error_type_str} {error_main}")
+                                    else:
+                                        error_parts.append(f"步骤 {step_num} ({step_type}): {error_type_str} {error_main}")
+                                
+                                error_message = " | ".join(error_parts)
+                            else:
+                                error_message = result.get("message", "执行失败")
+                        else:
+                            error_message = None
+                        
+                        # Extract screenshot paths from step results
+                        paths = [s.get("screenshot_path") for s in step_results if s.get("screenshot_path")]
+                        if paths:
+                            screenshot_files = [Path(p).name for p in paths if p]
                     else:
-                        # Other non-zero return codes
                         status = FlowStatus.FAILED
                         result_payload = None
-                        error_message = stderr or "Execution failed"
-                        # Classify the error from stderr
-                        if stderr:
-                            classified = classify_error(stderr)
-                            error_types.add(classified.value)
+                        err_payload = extract_json_payload(stderr) or extract_json_payload(stdout)
+                        if err_payload:
+                            if not err_payload.get("execution_id"):
+                                err_payload["execution_id"] = execution_id
+                            error_message = err_payload.get("message") or "Execution failed"
+                            error_types.add(classify_error(str(error_message)).value)
+                            result_payload = json.dumps(err_payload, ensure_ascii=False)
+                        else:
+                            error_message = stderr or "Execution failed"
+                            if stderr:
+                                classified = classify_error(stderr)
+                                error_types.add(classified.value)
+                            result_payload = json.dumps(
+                                {
+                                    "status": "failed",
+                                    "execution_id": execution_id,
+                                    "message": error_message,
+                                },
+                                ensure_ascii=False,
+                            )
                     
                     # Save to database
                     with session_scope() as db:
@@ -181,7 +222,7 @@ class AutomationExecutor:
                 
                 except subprocess.TimeoutExpired:
                     # Process timeout after 5 minutes
-                    logger.error(f"Flow {flow.id} process timeout after 300 seconds")
+                    logger.error(f"Flow {flow.id} process timeout after {settings.automation_process_timeout_seconds} seconds")
                     process.kill()
                     finished_at = datetime.utcnow()
                     duration_ms = int((finished_at - started_at).total_seconds() * 1000)
@@ -194,6 +235,14 @@ class AutomationExecutor:
                                 started_at=started_at,
                                 finished_at=finished_at,
                                 duration_ms=duration_ms,
+                                result_payload=json.dumps(
+                                    {
+                                        "status": "failed",
+                                        "execution_id": execution_id,
+                                        "message": "执行进程超时（超过5分钟）",
+                                    },
+                                    ensure_ascii=False,
+                                ),
                                 error_message="执行进程超时（超过5分钟）",
                                 error_types=[ErrorType.PROCESS_TIMEOUT.value],
                             )
@@ -217,6 +266,14 @@ class AutomationExecutor:
                                 started_at=started_at,
                                 finished_at=datetime.utcnow(),
                                 duration_ms=int((datetime.utcnow() - started_at).total_seconds() * 1000),
+                                result_payload=json.dumps(
+                                    {
+                                        "status": "failed",
+                                        "execution_id": execution_id,
+                                        "message": str(e),
+                                    },
+                                    ensure_ascii=False,
+                                ),
                                 error_message=str(e),
                                 error_types=[classified.value],
                             )
@@ -226,6 +283,7 @@ class AutomationExecutor:
                         logger.error(f"Failed to save error history: {db_error}")
                 
                 finally:
+                    process_manager.clear_stop_request(flow.id)
                     # Clean up from process manager
                     if process_manager.is_running(flow.id):
                         process_manager.stop_process(flow.id)

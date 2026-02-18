@@ -8,11 +8,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
 
-from playwright.async_api import Browser, Page, async_playwright
+from patchright.async_api import Browser, Page, async_playwright
 
 from app.services.automation.dsl_parser import ParsedStep, StepType
 from app.services.automation.error_types import classify_error, ErrorType
 from app.services.automation.cloudflare_handler import CloudflareHandler
+from app.services.automation.handlers import HANDLER_REGISTRY
+from app.services.automation.variable_resolver import resolve_variables
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +61,7 @@ class PlaywrightExecutor:
         screenshot_dir: str = "data/screenshots",
         storage_state_dir: str = "data/storage_states",
         cf_protection: bool = True,  # Enable Cloudflare auto-handling
+        max_concurrent_executions: int | None = None,
     ):
         self.headless = headless
         self.browser_type = browser_type
@@ -67,6 +70,11 @@ class PlaywrightExecutor:
         self.screenshot_dir.mkdir(parents=True, exist_ok=True)
         self.storage_state_dir = Path(storage_state_dir)
         self.storage_state_dir.mkdir(parents=True, exist_ok=True)
+        self._semaphore: asyncio.Semaphore | None = (
+            asyncio.Semaphore(max_concurrent_executions)
+            if max_concurrent_executions and max_concurrent_executions > 0
+            else None
+        )
         
         # Cloudflare challenge handler
         self.cf_handler = CloudflareHandler(
@@ -97,9 +105,36 @@ class PlaywrightExecutor:
         Returns:
             ExecutionResult with detailed execution information
         """
+        if self._semaphore:
+            async with self._semaphore:
+                return await self._execute_with_playwright(
+                    flow_id,
+                    steps,
+                    use_cdp_mode=use_cdp_mode,
+                    cdp_port=cdp_port,
+                    cdp_user_data_dir=cdp_user_data_dir,
+                )
+
+        return await self._execute_with_playwright(
+            flow_id,
+            steps,
+            use_cdp_mode=use_cdp_mode,
+            cdp_port=cdp_port,
+            cdp_user_data_dir=cdp_user_data_dir,
+        )
+
+    async def _execute_with_playwright(
+        self,
+        flow_id: int,
+        steps: list[ParsedStep],
+        *,
+        use_cdp_mode: bool,
+        cdp_port: int,
+        cdp_user_data_dir: Optional[str],
+    ) -> ExecutionResult:
         started_at = datetime.utcnow()
         step_results = []
-        variables = {}
+        variables: dict[str, Any] = {}
         steps_failed = 0
 
         async with async_playwright() as p:
@@ -234,39 +269,7 @@ class PlaywrightExecutor:
                 }
 
                 context = await browser.new_context(**context_options)
-                
-                # Anti-detection: Override navigator properties
-                await context.add_init_script("""
-                    // Override webdriver detection
-                    Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-                    
-                    // Override plugins
-                    Object.defineProperty(navigator, 'plugins', {
-                        get: () => [1, 2, 3, 4, 5]
-                    });
-                    
-                    // Override languages
-                    Object.defineProperty(navigator, 'languages', {
-                        get: () => ['zh-CN', 'zh', 'en']
-                    });
-                    
-                    // Override permissions
-                    const originalQuery = window.navigator.permissions.query;
-                    window.navigator.permissions.query = (parameters) => (
-                        parameters.name === 'notifications' ?
-                            Promise.resolve({ state: Notification.permission }) :
-                            originalQuery(parameters)
-                    );
-                    
-                    // Chrome runtime mock
-                    window.chrome = { runtime: {} };
-                    
-                    // Override hardware concurrency
-                    Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => 8 });
-                    
-                    // Override device memory
-                    Object.defineProperty(navigator, 'deviceMemory', { get: () => 8 });
-                """)
+
                 page = await context.new_page()
             
             # Ensure we have a page
@@ -275,7 +278,9 @@ class PlaywrightExecutor:
 
             try:
                 for idx, step in enumerate(steps):
-                    logger.info(f"Executing step {idx + 1}/{len(steps)}: {step.type}")
+                    logger.info(
+                        f"[flow={flow_id} step={idx + 1}/{len(steps)} type={step.type.value}] Executing"
+                    )
                     step_start = datetime.utcnow()
 
                     # Pre-step CF check (random probability)
@@ -306,7 +311,10 @@ class PlaywrightExecutor:
                             logger.warning(f"Step {idx + 1} failed: {result.error}")
 
                     except Exception as e:
-                        logger.error(f"Step {idx + 1} error: {e}", exc_info=True)
+                        logger.error(
+                            f"[flow={flow_id} step={idx + 1}/{len(steps)} type={step.type.value}] Error: {e}",
+                            exc_info=True,
+                        )
                         step_duration = int(
                             (datetime.utcnow() - step_start).total_seconds() * 1000
                         )
@@ -389,36 +397,17 @@ class PlaywrightExecutor:
         """Execute a single step."""
         start_time = datetime.utcnow()
 
-        handlers = {
-            StepType.NAVIGATE: self._handle_navigate,
-            StepType.CLICK: self._handle_click,
-            StepType.INPUT: self._handle_input,
-            StepType.WAIT_FOR: self._handle_wait_for,
-            StepType.WAIT_TIME: self._handle_wait_time,
-            StepType.EXTRACT: self._handle_extract,
-            StepType.SCREENSHOT: self._handle_screenshot,
-            StepType.SELECT: self._handle_select,
-            StepType.CHECKBOX: self._handle_checkbox,
-            StepType.SCROLL: self._handle_scroll,
-            StepType.HOVER: self._handle_hover,
-            StepType.KEYBOARD: self._handle_keyboard,
-            StepType.SET_VARIABLE: self._handle_set_variable,
-            StepType.IF_EXISTS: self._handle_if_exists,
-            StepType.ASSERT_TEXT: self._handle_assert_text,
-            StepType.ASSERT_VISIBLE: self._handle_assert_visible,
-            StepType.EXTRACT_ALL: self._handle_extract_all,
-            StepType.RANDOM_DELAY: self._handle_random_delay,
-            StepType.TRY_CLICK: self._handle_try_click,
-            StepType.EVAL_JS: self._handle_eval_js,
-            StepType.NEW_TAB: self._handle_new_tab,
-            StepType.SWITCH_TAB: self._handle_switch_tab,
-            StepType.CLOSE_TAB: self._handle_close_tab,
-            StepType.LOOP: self._handle_loop,
-            StepType.LOOP_ARRAY: self._handle_loop_array,
-            StepType.IF_ELSE: self._handle_if_else,
+        # Control flow and special handlers that need self access
+        # These stay as instance methods because they need _execute_child_step or screenshot_dir
+        instance_handlers = {
+            StepType.SCREENSHOT: self._handle_screenshot,  # needs self.screenshot_dir
+            StepType.LOOP: self._handle_loop,              # needs self._execute_child_step
+            StepType.LOOP_ARRAY: self._handle_loop_array,  # needs self._execute_child_step
+            StepType.IF_ELSE: self._handle_if_else,        # needs self._execute_child_step
         }
 
-        handler = handlers.get(step.type)
+        # Try instance handler first, then fall back to registry
+        handler = instance_handlers.get(step.type) or HANDLER_REGISTRY.get(step.type)
         if not handler:
             raise ValueError(f"No handler for step type: {step.type}")
 
@@ -1013,16 +1002,7 @@ class PlaywrightExecutor:
 
     def _resolve_variables(self, value: str, variables: dict) -> str:
         """Resolve variable placeholders in string values."""
-        if not isinstance(value, str):
-            return value
-
-        # Replace {{variable_name}} with actual values
-        for var_name, var_value in variables.items():
-            placeholder = f"{{{{{var_name}}}}}"
-            if placeholder in value:
-                value = value.replace(placeholder, str(var_value))
-
-        return value
+        return resolve_variables(value, variables, stringify_non_str=False)
 
     def _classify_error(self, error: Exception) -> str:
         """Classify error type for better diagnostics using the error_types module."""

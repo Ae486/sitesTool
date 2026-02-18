@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><title>Automation Test Page</title></head>
+<body>
+  <h1 id="title">Test Page</h1>
+  <p id="greeting">Hello, World!</p>
+
+  <!-- click -->
+  <button id="btn-click" onclick="this.textContent='Clicked!'">Click Me</button>
+  <button id="btn-counter" onclick="document.getElementById('counter').textContent=
+    parseInt(document.getElementById('counter').textContent)+1">Increment</button>
+  <span id="counter">0</span>
+
+  <!-- input -->
+  <input id="text-input" type="text" placeholder="Type here" />
+  <input id="prefilled-input" type="text" value="old value" />
+
+  <!-- select -->
+  <select id="color-select">
+    <option value="">--Choose--</option>
+    <option value="red">Red</option>
+    <option value="green">Green</option>
+    <option value="blue">Blue</option>
+  </select>
+
+  <!-- checkbox -->
+  <input id="checkbox-agree" type="checkbox" />
+  <label for="checkbox-agree">I agree</label>
+
+  <!-- hover -->
+  <div id="hover-target" onmouseenter="this.classList.add('hovered')"
+       onmouseleave="this.classList.remove('hovered')"
+       style="width:100px;height:100px;background:#eee;">Hover Me</div>
+
+  <!-- drag & drop -->
+  <div id="drag-source" draggable="true" style="width:50px;height:50px;background:blue;color:#fff;">Drag</div>
+  <div id="drop-target" style="width:100px;height:100px;background:#ccc;margin-top:10px;"
+       ondragover="event.preventDefault()"
+       ondrop="this.textContent='Dropped!';event.preventDefault();">Drop Here</div>
+
+  <!-- file upload -->
+  <input id="file-upload" type="file" />
+
+  <!-- scroll -->
+  <div style="height:2000px;"></div>
+  <div id="scroll-target">Scroll Target Found</div>
+
+  <!-- extract list -->
+  <ul id="item-list">
+    <li class="item">Item A</li>
+    <li class="item">Item B</li>
+    <li class="item">Item C</li>
+  </ul>
+
+  <!-- extract attribute -->
+  <a id="link-example" href="https://example.com" data-info="meta123">Example Link</a>
+
+  <!-- visibility -->
+  <div id="hidden-box" style="display:none;">Hidden Content</div>
+  <button id="btn-show" onclick="document.getElementById('hidden-box').style.display='block'">Show</button>
+
+  <!-- delayed element -->
+  <script>
+    setTimeout(function() {
+      var el = document.createElement('div');
+      el.id = 'delayed-element';
+      el.textContent = 'I appeared!';
+      document.body.appendChild(el);
+    }, 500);
+  </script>
+
+  <!-- dialog -->
+  <button id="btn-alert" onclick="alert('Hello Alert')">Trigger Alert</button>
+  <button id="btn-confirm" onclick="document.getElementById('confirm-result').textContent=
+    confirm('Are you sure?') ? 'yes' : 'no'">Trigger Confirm</button>
+  <span id="confirm-result"></span>
+
+  <!-- network fetch -->
+  <button id="btn-fetch" onclick="fetch('/api/data').then(function(r){return r.json();}).then(function(d){
+    document.getElementById('fetch-result').textContent=JSON.stringify(d);})">Fetch Data</button>
+  <span id="fetch-result"></span>
+
+  <!-- if_exists -->
+  <div id="conditional-box">I exist</div>
+
+  <!-- eval_js -->
+  <div id="js-target"></div>
+</body>
+</html>

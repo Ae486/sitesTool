@@ -1,0 +1,40 @@
+CREATE TABLE automation_flows (
+    id                  BIGINT PRIMARY KEY AUTO_INCREMENT,
+    site_id             BIGINT NOT NULL,
+    name                VARCHAR(200) NOT NULL,
+    description         TEXT,
+    cron_expression     VARCHAR(100),
+    is_active           BOOLEAN NOT NULL DEFAULT TRUE,
+    dsl                 TEXT NOT NULL,
+    last_status         VARCHAR(20) NOT NULL DEFAULT 'idle',
+    headless            BOOLEAN NOT NULL DEFAULT TRUE,
+    browser_type        VARCHAR(50) NOT NULL DEFAULT 'chromium',
+    browser_path        VARCHAR(500),
+    use_cdp_mode        BOOLEAN NOT NULL DEFAULT FALSE,
+    cdp_port            INT NOT NULL DEFAULT 9222,
+    cdp_user_data_dir   VARCHAR(500),
+    created_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_flow_site FOREIGN KEY (site_id) REFERENCES sites(id) ON DELETE CASCADE,
+    INDEX idx_flow_site (site_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE checkin_history (
+    id                  BIGINT PRIMARY KEY AUTO_INCREMENT,
+    flow_id             BIGINT NOT NULL,
+    status              VARCHAR(20) NOT NULL DEFAULT 'idle',
+    started_at          DATETIME NOT NULL,
+    finished_at         DATETIME,
+    duration_ms         INT,
+    log                 LONGTEXT,
+    result_payload      LONGTEXT,
+    error_message       TEXT,
+    screenshot_files    JSON,
+    error_types         JSON,
+    created_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_history_flow FOREIGN KEY (flow_id) REFERENCES automation_flows(id) ON DELETE CASCADE,
+    INDEX idx_history_flow_status (flow_id, status),
+    INDEX idx_history_started (started_at),
+    INDEX idx_history_flow_id (flow_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
