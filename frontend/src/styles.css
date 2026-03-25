@@ -146,3 +146,13 @@ body {
   overflow: hidden;
   box-shadow: var(--shadow-sm);
 }
+
+/* Proxy row checking animation */
+@keyframes pulseBlue {
+  0%, 100% { background-color: transparent; }
+  50% { background-color: rgba(59, 130, 246, 0.06); }
+}
+
+.proxy-row-checking > td {
+  animation: pulseBlue 1.5s ease-in-out infinite !important;
+}

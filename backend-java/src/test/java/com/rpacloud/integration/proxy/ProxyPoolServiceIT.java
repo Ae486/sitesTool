@@ -43,7 +43,7 @@ class ProxyPoolServiceIT extends BaseIntegrationTest {
         );
 
         // Update score via service — writes to MySQL + Redis ZSET
-        proxyPoolService.updateScore(proxy.getId(), true, 150);
+        proxyPoolService.updateScore(proxy.getId(), true, 150, null, null);
 
         // Verify MySQL
         Proxy updated = proxyRepository.findById(proxy.getId()).orElseThrow();
@@ -69,8 +69,8 @@ class ProxyPoolServiceIT extends BaseIntegrationTest {
         );
 
         // Give "good" high score, "bad" low score
-        proxyPoolService.updateScore(good.getId(), true, 50);
-        proxyPoolService.updateScore(bad.getId(), false, 0);
+        proxyPoolService.updateScore(good.getId(), true, 50, null, null);
+        proxyPoolService.updateScore(bad.getId(), false, 0, null, null);
 
         // getBestProxy should return the one with highest score
         Optional<Proxy> best = proxyPoolService.getBestProxy();
@@ -110,11 +110,11 @@ class ProxyPoolServiceIT extends BaseIntegrationTest {
             );
         }
 
-        var page1 = proxyPoolService.getAllProxies(0, 3);
+        var page1 = proxyPoolService.getAllProxies(0, 3, null, null, null, null);
         assertThat(page1.getTotal()).isEqualTo(5L);
         assertThat(page1.getItems()).hasSize(3);
 
-        var page2 = proxyPoolService.getAllProxies(3, 3);
+        var page2 = proxyPoolService.getAllProxies(3, 3, null, null, null, null);
         assertThat(page2.getItems()).hasSize(2);
     }
 
@@ -125,9 +125,9 @@ class ProxyPoolServiceIT extends BaseIntegrationTest {
                         .successCount(0).failCount(0).avgLatencyMs(0).build()
         );
 
-        proxyPoolService.updateScore(proxy.getId(), true, 100);
-        proxyPoolService.updateScore(proxy.getId(), true, 200);
-        proxyPoolService.updateScore(proxy.getId(), true, 300);
+        proxyPoolService.updateScore(proxy.getId(), true, 100, null, null);
+        proxyPoolService.updateScore(proxy.getId(), true, 200, null, null);
+        proxyPoolService.updateScore(proxy.getId(), true, 300, null, null);
 
         Proxy updated = proxyRepository.findById(proxy.getId()).orElseThrow();
         assertThat(updated.getSuccessCount()).isEqualTo(3);

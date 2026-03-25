@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.rpacloud.execution.worker.WorkerHandle;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Component;
 public class ProcessManager {
 
     private final ConcurrentHashMap<Long, ProcessInfo> processes = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Long, WorkerHandle> workerHandles = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<Long, Boolean> stopRequests = new ConcurrentHashMap<>();
 
     public record ProcessInfo(long flowId, Process process, Instant startedAt) {
@@ -35,22 +37,55 @@ public class ProcessManager {
         processes.remove(flowId);
     }
 
-    public boolean isRunning(long flowId) {
-        ProcessInfo info = processes.get(flowId);
-        if (info == null) return false;
-        if (!info.isAlive()) {
-            processes.remove(flowId);
-            return false;
+    // ---- Worker handle tracking (pooled path) ----
+
+    public void registerWorker(long flowId, WorkerHandle worker) {
+        if (processes.containsKey(flowId) || workerHandles.containsKey(flowId)) {
+            throw new FlowAlreadyRunningException(flowId);
         }
-        return true;
+        workerHandles.put(flowId, worker);
+        stopRequests.remove(flowId);
+        log.info("Registered worker {} for flow {}", worker.getId(), flowId);
+    }
+
+    public void unregisterWorker(long flowId) {
+        workerHandles.remove(flowId);
+    }
+
+    public boolean isRunning(long flowId) {
+        // Check subprocess path
+        ProcessInfo info = processes.get(flowId);
+        if (info != null) {
+            if (!info.isAlive()) { processes.remove(flowId); }
+            else { return true; }
+        }
+        // Check worker path
+        WorkerHandle wh = workerHandles.get(flowId);
+        if (wh != null) {
+            if (wh.isDestroyed()) { workerHandles.remove(flowId); }
+            else { return true; }
+        }
+        return false;
     }
 
     public List<Long> getRunningFlowIds() {
         processes.entrySet().removeIf(e -> !e.getValue().isAlive());
-        return List.copyOf(processes.keySet());
+        workerHandles.entrySet().removeIf(e -> e.getValue().isDestroyed());
+        var ids = new java.util.HashSet<>(processes.keySet());
+        ids.addAll(workerHandles.keySet());
+        return List.copyOf(ids);
     }
 
     public boolean forceStop(long flowId) {
+        // Try worker path first
+        WorkerHandle wh = workerHandles.remove(flowId);
+        if (wh != null) {
+            stopRequests.put(flowId, true);
+            wh.destroy();
+            log.info("Destroyed worker {} for flow {}", wh.getId(), flowId);
+            return true;
+        }
+        // Subprocess path
         ProcessInfo info = processes.get(flowId);
         if (info == null) return false;
         stopRequests.put(flowId, true);

@@ -1,5 +1,6 @@
 package com.rpacloud.flow.service;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -19,11 +20,14 @@ import com.rpacloud.execution.schedule.FlowScheduleService;
 import com.rpacloud.site.entity.Site;
 import com.rpacloud.site.repository.SiteRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import com.rpacloud.common.dto.OffsetBasedPageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class FlowService {
@@ -150,11 +154,10 @@ public class FlowService {
         try {
             return objectMapper.readValue(dsl, MAP_TYPE);
         } catch (JsonProcessingException e) {
+            log.warn("Failed to deserialize DSL, returning empty map: {}", e.getMessage());
             return Map.of();
         }
     }
-
-    // --- Execution operations (moved from Controller) ---
 
     public AutomationExecutor.TriggerResult triggerFlow(Long id) {
         AutomationFlow flow = getEntityById(id);
@@ -173,5 +176,68 @@ public class FlowService {
 
     public java.util.List<Long> getRunningFlowIds() {
         return automationExecutor.getRunningFlowIds();
+    }
+
+    public byte[] exportFlow(Long id) {
+        AutomationFlow flow = flowRepository.findById(id)
+                .orElseThrow(() -> new BizException(ErrorCode.RESOURCE_NOT_FOUND, "Flow not found"));
+        Map<String, Object> export = new LinkedHashMap<>();
+        export.put("format_version", 1);
+        export.put("exported_at", java.time.Instant.now().toString());
+        export.put("name", flow.getName());
+        export.put("description", flow.getDescription());
+        export.put("dsl", deserializeDsl(flow.getDsl()));
+        export.put("cron_expression", flow.getCronExpression());
+        try {
+            return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(export);
+        } catch (JsonProcessingException e) {
+            throw new BizException(ErrorCode.INTERNAL_ERROR, "Failed to serialize flow for export");
+        }
+    }
+
+    @Transactional
+    @SuppressWarnings("unchecked")
+    public FlowResponse importFlow(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new BizException(ErrorCode.VALIDATION_FAILED, "Import file is empty");
+        }
+        try {
+            Map<String, Object> imported = objectMapper.readValue(file.getInputStream(), MAP_TYPE);
+            Object formatVersion = imported.get("format_version");
+            if (formatVersion == null || !(formatVersion instanceof Number n) || n.intValue() != 1) {
+                throw new BizException(ErrorCode.VALIDATION_FAILED, "Unsupported format_version (expected 1)");
+            }
+            String name = (String) imported.get("name");
+            if (name == null || name.isBlank()) {
+                throw new BizException(ErrorCode.VALIDATION_FAILED, "Import file missing 'name' field");
+            }
+            Object dslObj = imported.get("dsl");
+            if (!(dslObj instanceof Map)) {
+                throw new BizException(ErrorCode.VALIDATION_FAILED, "Import file missing or invalid 'dsl' field");
+            }
+            Map<String, Object> dslMap = (Map<String, Object>) dslObj;
+            if (!dslMap.containsKey("steps")) {
+                throw new BizException(ErrorCode.VALIDATION_FAILED, "DSL must contain 'steps' array");
+            }
+
+            // Use first available site
+            Site site = siteRepository.findAll(new OffsetBasedPageRequest(0, 1)).getContent().stream().findFirst()
+                    .orElseThrow(() -> new BizException(ErrorCode.VALIDATION_FAILED,
+                            "No site available. Create a site first before importing flows."));
+
+            AutomationFlow flow = AutomationFlow.builder()
+                    .site(site)
+                    .name(name + " (imported)")
+                    .description((String) imported.get("description"))
+                    .cronExpression((String) imported.get("cron_expression"))
+                    .dsl(serializeDsl(dslMap))
+                    .build();
+            flow = flowRepository.save(flow);
+            return toResponse(flow);
+        } catch (BizException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new BizException(ErrorCode.VALIDATION_FAILED, "Invalid import file: " + e.getMessage());
+        }
     }
 }

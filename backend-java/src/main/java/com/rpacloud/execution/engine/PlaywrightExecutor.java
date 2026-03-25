@@ -32,6 +32,9 @@ public class PlaywrightExecutor {
     private final String proxyUrl;
     private final String internalApiUrl;
     private final String internalToken;
+    private final boolean useCdpMode;
+    private final int cdpPort;
+    private final String cdpUserDataDir;
 
     // Handler instances (no Spring, manual wiring)
     private final NavigationHandler navigationHandler = new NavigationHandler();
@@ -42,18 +45,28 @@ public class PlaywrightExecutor {
     private final MiscHandler miscHandler = new MiscHandler();
     private final NetworkHandler networkHandler = new NetworkHandler();
     private final LlmCallHandler llmCallHandler;
+    private final HttpRequestHandler httpRequestHandler = new HttpRequestHandler();
+    private final SendNotificationHandler sendNotificationHandler;
+    private final LlmAgentHandler llmAgentHandler;
 
     public PlaywrightExecutor(boolean headless, String browserType, String browserPath, Path screenshotDir) {
-        this(headless, browserType, browserPath, screenshotDir, null, null, null);
+        this(headless, browserType, browserPath, screenshotDir, null, null, null, false, 9222, null);
     }
 
     public PlaywrightExecutor(boolean headless, String browserType, String browserPath, Path screenshotDir, String proxyUrl) {
-        this(headless, browserType, browserPath, screenshotDir, proxyUrl, null, null);
+        this(headless, browserType, browserPath, screenshotDir, proxyUrl, null, null, false, 9222, null);
     }
 
     public PlaywrightExecutor(boolean headless, String browserType, String browserPath,
                               Path screenshotDir, String proxyUrl,
                               String internalApiUrl, String internalToken) {
+        this(headless, browserType, browserPath, screenshotDir, proxyUrl, internalApiUrl, internalToken, false, 9222, null);
+    }
+
+    public PlaywrightExecutor(boolean headless, String browserType, String browserPath,
+                              Path screenshotDir, String proxyUrl,
+                              String internalApiUrl, String internalToken,
+                              boolean useCdpMode, int cdpPort, String cdpUserDataDir) {
         this.headless = headless;
         this.browserType = browserType;
         this.browserPath = browserPath;
@@ -61,9 +74,16 @@ public class PlaywrightExecutor {
         this.proxyUrl = proxyUrl;
         this.internalApiUrl = internalApiUrl;
         this.internalToken = internalToken;
+        this.useCdpMode = useCdpMode;
+        this.cdpPort = cdpPort;
+        this.cdpUserDataDir = cdpUserDataDir;
         this.extractHandler = new ExtractHandler(screenshotDir);
         this.llmCallHandler = (internalApiUrl != null && internalToken != null)
                 ? new LlmCallHandler(internalApiUrl, internalToken) : null;
+        this.sendNotificationHandler = (internalApiUrl != null && internalToken != null)
+                ? new SendNotificationHandler(internalApiUrl, internalToken) : null;
+        this.llmAgentHandler = (internalApiUrl != null && internalToken != null)
+                ? new LlmAgentHandler(internalApiUrl, internalToken, screenshotDir) : null;
         screenshotDir.toFile().mkdirs();
     }
 
@@ -72,27 +92,69 @@ public class PlaywrightExecutor {
         List<StepResult> stepResults = new ArrayList<>();
         Map<String, Object> variables = new HashMap<>();
         int stepsFailed = 0;
+        long totalTokensUsed = 0;
 
         try (Playwright pw = Playwright.create()) {
-            BrowserType launcher = selectLauncher(pw);
-            var launchOptions = new BrowserType.LaunchOptions().setHeadless(headless);
-            if ("chrome".equals(browserType)) launchOptions.setChannel("chrome");
-            else if ("edge".equals(browserType)) launchOptions.setChannel("msedge");
-            else if ("custom".equals(browserType) && browserPath != null) launchOptions.setExecutablePath(Path.of(browserPath));
-            if (proxyUrl != null && !proxyUrl.isBlank()) {
-                launchOptions.setProxy(new com.microsoft.playwright.options.Proxy(proxyUrl));
-            }
+            Browser browser;
+            BrowserContext context;
+            Page page;
+            boolean isCdpConnection = false;
 
-            try (Browser browser = launcher.launch(launchOptions)) {
-                BrowserContext context = browser.newContext(new Browser.NewContextOptions()
+            if (useCdpMode) {
+                // --- CDP mode: connect to externally-managed browser ---
+                if (proxyUrl != null && !proxyUrl.isBlank()) {
+                    log.warn("CDP mode: proxy setting '{}' will be ignored (CDP uses browser's own network)", proxyUrl);
+                }
+                CdpBrowserManager manager = new CdpBrowserManager();
+                if (!CdpBrowserManager.isCdpReady(cdpPort)) {
+                    boolean started = manager.startBrowser(browserType, cdpPort, browserPath, cdpUserDataDir, headless);
+                    if (!started) {
+                        throw new RuntimeException("CDP mode: failed to start browser on port " + cdpPort);
+                    }
+                }
+                // Final readiness check with retry
+                if (!CdpBrowserManager.isCdpReady(cdpPort)) {
+                    log.warn("CDP not ready, waiting 5s...");
+                    try { Thread.sleep(5000); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+                    if (!CdpBrowserManager.isCdpReady(cdpPort)) {
+                        throw new RuntimeException("CDP interface on port " + cdpPort + " is not responding");
+                    }
+                }
+                String endpoint = "http://localhost:" + cdpPort;
+                log.info("Connecting to CDP endpoint: {}", endpoint);
+                browser = pw.chromium().connectOverCDP(endpoint,
+                        new BrowserType.ConnectOverCDPOptions().setTimeout(60000));
+                // Reuse existing context (preserves user logins) or create new
+                context = browser.contexts().isEmpty() ? browser.newContext() : browser.contexts().get(0);
+                page = context.pages().isEmpty() ? context.newPage() : context.pages().get(0);
+                isCdpConnection = true;
+                log.info("CDP connected: {} context(s), {} page(s)", browser.contexts().size(), context.pages().size());
+            } else {
+                // --- Normal mode: launch new browser ---
+                BrowserType launcher = selectLauncher(pw);
+                var launchOptions = new BrowserType.LaunchOptions().setHeadless(headless);
+                if ("chrome".equals(browserType)) launchOptions.setChannel("chrome");
+                else if ("edge".equals(browserType)) launchOptions.setChannel("msedge");
+                else if ("custom".equals(browserType) && browserPath != null) launchOptions.setExecutablePath(Path.of(browserPath));
+                // No browser-level proxy — Playwright 1.47+ supports per-context proxy
+                // on Windows Chromium without placeholder (PR #31724 fixed upstream bug).
+                browser = launcher.launch(launchOptions);
+                var contextOptions = new Browser.NewContextOptions()
                         .setViewportSize(1920, 1080)
                         .setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
                         .setLocale("zh-CN")
                         .setTimezoneId("Asia/Shanghai")
-                        .setIgnoreHTTPSErrors(true));
+                        .setIgnoreHTTPSErrors(true);
+                if (proxyUrl != null && !proxyUrl.isBlank()) {
+                    contextOptions.setProxy(new com.microsoft.playwright.options.Proxy(proxyUrl));
+                }
+                context = browser.newContext(contextOptions);
                 context.addInitScript(ANTI_DETECT_SCRIPT);
-                Page page = context.newPage();
+                page = context.newPage();
+                isCdpConnection = false;
+            }
 
+            try {
                 for (int idx = 0; idx < steps.size(); idx++) {
                     ParsedStep step = steps.get(idx);
                     log.info("[flow={} step={}/{} type={}] Executing", flowId, idx + 1, steps.size(), step.getType().value());
@@ -100,6 +162,7 @@ public class PlaywrightExecutor {
                     try {
                         HandlerResult result = dispatch(page, step, idx, variables, flowId);
                         long durationMs = Duration.between(stepStart, Instant.now()).toMillis();
+                        totalTokensUsed += result.getTotalTokensUsed();
                         if (result.getExtractedData() != null && !result.getExtractedData().isEmpty()) {
                             variables.putAll(result.getExtractedData());
                         }
@@ -127,7 +190,15 @@ public class PlaywrightExecutor {
                         log.warn("Step {} failed: {}", idx + 1, e.getMessage());
                     }
                 }
-                context.close();
+            } finally {
+                if (isCdpConnection) {
+                    // CDP: disconnect only, browser process stays alive for next execution
+                    try { browser.close(); } catch (Exception e) { log.debug("CDP disconnect: {}", e.getMessage()); }
+                    log.info("CDP mode: disconnected (browser process kept running on port {})", cdpPort);
+                } else {
+                    context.close();
+                    browser.close();
+                }
             }
         }
 
@@ -136,7 +207,62 @@ public class PlaywrightExecutor {
         String status = stepsFailed == 0 ? "success" : (stepsFailed < steps.size() ? "partial" : "failed");
 
         return new ExecutionResult(flowId, status, startedAt, completedAt, totalMs,
-                steps.size(), stepsFailed, stepResults, variables);
+                steps.size(), stepsFailed, stepResults, variables, totalTokensUsed);
+    }
+
+    /**
+     * Execute steps on an externally-provided Page (Worker pool mode).
+     * Caller manages Browser/Context lifecycle; this method only runs the step dispatch loop.
+     */
+    public ExecutionResult executeOnPage(Page page, long flowId, List<ParsedStep> steps) {
+        Instant startedAt = Instant.now();
+        List<StepResult> stepResults = new ArrayList<>();
+        Map<String, Object> variables = new HashMap<>();
+        int stepsFailed = 0;
+        long totalTokensUsed = 0;
+
+        for (int idx = 0; idx < steps.size(); idx++) {
+            ParsedStep step = steps.get(idx);
+            log.info("[flow={} step={}/{} type={}] Executing", flowId, idx + 1, steps.size(), step.getType().value());
+            Instant stepStart = Instant.now();
+            try {
+                HandlerResult result = dispatch(page, step, idx, variables, flowId);
+                long durationMs = Duration.between(stepStart, Instant.now()).toMillis();
+                totalTokensUsed += result.getTotalTokensUsed();
+                if (result.getExtractedData() != null && !result.getExtractedData().isEmpty()) {
+                    variables.putAll(result.getExtractedData());
+                }
+                stepResults.add(StepResult.builder()
+                        .stepIndex(idx).stepType(step.getType().value())
+                        .success(true).durationMs(durationMs)
+                        .message(result.getMessage())
+                        .extractedData(result.getExtractedData())
+                        .screenshotPath(result.getScreenshotPath())
+                        .description(step.getDescription())
+                        .build());
+            } catch (Exception e) {
+                long durationMs = Duration.between(stepStart, Instant.now()).toMillis();
+                stepsFailed++;
+                String errorScreenshot = captureErrorScreenshot(page, flowId, idx);
+                String errorType = ErrorType.classify(e).value();
+                String detail = formatErrorDetail(e, step, page);
+                stepResults.add(StepResult.builder()
+                        .stepIndex(idx).stepType(step.getType().value())
+                        .success(false).durationMs(durationMs)
+                        .error("[" + errorType + "] " + detail)
+                        .screenshotPath(errorScreenshot)
+                        .description(step.getDescription())
+                        .build());
+                log.warn("Step {} failed: {}", idx + 1, e.getMessage());
+            }
+        }
+
+        Instant completedAt = Instant.now();
+        long totalMs = Duration.between(startedAt, completedAt).toMillis();
+        String status = stepsFailed == 0 ? "success" : (stepsFailed < steps.size() ? "partial" : "failed");
+
+        return new ExecutionResult(flowId, status, startedAt, completedAt, totalMs,
+                steps.size(), stepsFailed, stepResults, variables, totalTokensUsed);
     }
 
     private HandlerResult dispatch(Page page, ParsedStep step, int idx,
@@ -176,6 +302,15 @@ public class PlaywrightExecutor {
             case LLM_CALL -> {
                 if (llmCallHandler == null) throw new RuntimeException("LLM not configured: missing --internal-api-url / --internal-token");
                 yield llmCallHandler.handle(params, variables);
+            }
+            case HTTP_REQUEST -> httpRequestHandler.handle(params, variables);
+            case SEND_NOTIFICATION -> {
+                if (sendNotificationHandler == null) throw new RuntimeException("Notification not configured: missing --internal-api-url / --internal-token");
+                yield sendNotificationHandler.handle(params, variables);
+            }
+            case LLM_AGENT -> {
+                if (llmAgentHandler == null) throw new RuntimeException("LLM agent not configured: missing --internal-api-url / --internal-token");
+                yield llmAgentHandler.handle(page, params, variables);
             }
             case LOOP -> executeLoop(page, params, variables, flowId);
             case LOOP_ARRAY -> executeLoopArray(page, params, variables, flowId);
@@ -366,6 +501,7 @@ public class PlaywrightExecutor {
         int stepsFailed;
         List<StepResult> stepResults;
         Map<String, Object> variables;
+        long totalTokensUsed;
     }
 
     private static final String ANTI_DETECT_SCRIPT = """

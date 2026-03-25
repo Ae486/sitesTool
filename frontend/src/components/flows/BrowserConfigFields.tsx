@@ -1,11 +1,20 @@
-import { Form, Input, Select, Switch } from "antd";
+import { Form, Input, Select, Switch, Divider, Segmented } from "antd";
 import type { FormInstance } from "antd";
+import { useQuery } from "@tanstack/react-query";
+import { fetchProxies } from "../../api/proxy";
 
 interface BrowserConfigFieldsProps {
   form: FormInstance;
 }
 
 const BrowserConfigFields = ({ form }: BrowserConfigFieldsProps) => {
+  const { data: proxyData } = useQuery({
+    queryKey: ["proxies", 0, 100],
+    queryFn: () => fetchProxies(0, 100),
+  });
+
+  const activeProxies = (proxyData?.items ?? []).filter((p) => p.is_active);
+
   return (
     <>
       <Form.Item
@@ -99,14 +108,72 @@ const BrowserConfigFields = ({ form }: BrowserConfigFieldsProps) => {
                 tooltip="留空则自动使用复制的专用配置。仅当需要使用特定配置时才填写。"
                 extra={
                   <span style={{ fontSize: "12px", color: "#666" }}>
-                    ⚠️ 留空 = 自动复制并使用专用配置（推荐，与日常浏览器隔离）
-                    <br />
-                    高级：指定特定路径（如 C:\Users\你\AppData\Roaming\autoTool\cdp_browser_profile）
+                    留空 = 自动复制并使用专用配置（推荐，与日常浏览器隔离）
                   </span>
                 }
               >
                 <Input placeholder="留空使用自动复制的专用配置（推荐）" />
               </Form.Item>
+            </>
+          ) : null
+        }
+      </Form.Item>
+
+      <Divider style={{ borderColor: "#e4e4e7" }}>代理设置</Divider>
+
+      <Form.Item
+        name="use_proxy"
+        label="使用代理"
+        valuePropName="checked"
+      >
+        <Switch />
+      </Form.Item>
+
+      <Form.Item
+        noStyle
+        shouldUpdate={(prev, curr) =>
+          prev.use_proxy !== curr.use_proxy ||
+          prev._proxy_mode !== curr._proxy_mode
+        }
+      >
+        {({ getFieldValue }) =>
+          getFieldValue("use_proxy") ? (
+            <>
+              <Form.Item name="_proxy_mode" label="分配方式" initialValue="auto">
+                <Segmented
+                  options={[
+                    { label: "自动分配", value: "auto" },
+                    { label: "指定代理", value: "specific" },
+                  ]}
+                  onChange={(v) => {
+                    if (v === "auto") form.setFieldValue("proxy_id", null);
+                  }}
+                />
+              </Form.Item>
+
+              {getFieldValue("_proxy_mode") === "specific" && (
+                <Form.Item name="proxy_id" label="选择代理">
+                  <Select
+                    placeholder="选择代理节点"
+                    allowClear
+                    showSearch
+                    optionFilterProp="label"
+                    options={activeProxies.map((p) => ({
+                      value: p.id,
+                      label: `${p.ip}:${p.port}`,
+                      desc: `${p.region || "未知"} · ${p.avg_latency_ms}ms`,
+                    }))}
+                    optionRender={(option) => (
+                      <div style={{ display: "flex", justifyContent: "space-between" }}>
+                        <span>{option.label}</span>
+                        <span style={{ color: "#71717a", fontSize: 12 }}>
+                          {(option.data as any).desc}
+                        </span>
+                      </div>
+                    )}
+                  />
+                </Form.Item>
+              )}
             </>
           ) : null
         }

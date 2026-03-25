@@ -1,6 +1,7 @@
 import {
   ApartmentOutlined,
   ApiOutlined,
+  CloudServerOutlined,
   HistoryOutlined,
   LogoutOutlined,
   RadarChartOutlined,
@@ -8,7 +9,7 @@ import {
 import { Avatar, Button, Layout, Menu, theme } from "antd";
 import { AnimatePresence, motion } from "framer-motion";
 import { pageVariants } from "../constants/animations";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import useAuthStore from "../store/auth";
 
@@ -23,11 +24,17 @@ const AppLayout = () => {
   } = theme.useToken();
 
   const selectedKey = useMemo(() => {
+    if (location.pathname === "/proxies/tunnel") return "/proxies/tunnel";
     if (location.pathname.startsWith("/sites")) return "/sites";
     if (location.pathname.startsWith("/flows")) return "/flows";
     if (location.pathname.startsWith("/history")) return "/history";
+    if (location.pathname.startsWith("/proxies")) return "/proxies";
     return "/";
   }, [location.pathname]);
+
+  const [openKeys, setOpenKeys] = useState<string[]>(
+    () => (location.pathname.startsWith("/proxies") ? ["proxy-group"] : []),
+  );
 
   return (
     <Layout
@@ -78,6 +85,8 @@ const AppLayout = () => {
           theme="dark"
           mode="inline"
           selectedKeys={[selectedKey]}
+          openKeys={openKeys}
+          onOpenChange={setOpenKeys}
           style={{
             background: "transparent",
             border: "none",
@@ -88,8 +97,17 @@ const AppLayout = () => {
             { key: "/sites", icon: <ApartmentOutlined />, label: "站点管理" },
             { key: "/flows", icon: <ApiOutlined />, label: "自动化流程" },
             { key: "/history", icon: <HistoryOutlined />, label: "执行历史" },
+            {
+              key: "proxy-group",
+              icon: <CloudServerOutlined />,
+              label: "代理",
+              children: [
+                { key: "/proxies", label: "IP 代理池" },
+                { key: "/proxies/tunnel", label: "隧道代理配置" },
+              ],
+            },
           ]}
-          onClick={({ key }) => navigate(key)}
+          onClick={({ key }) => { if (key.startsWith("/")) navigate(key); }}
         />
       </Sider>
       <Layout>
@@ -113,6 +131,8 @@ const AppLayout = () => {
             {selectedKey === "/sites" && "站点管理"}
             {selectedKey === "/flows" && "自动化流程"}
             {selectedKey === "/history" && "执行历史"}
+            {selectedKey === "/proxies" && "IP 代理池"}
+            {selectedKey === "/proxies/tunnel" && "隧道代理配置"}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
             <div

@@ -1,0 +1,11 @@
+IP,Port,Protocol,Region,Provider,SuccessCount,FailCount,AvgLatencyMs
+18.163.3.251,54321,HTTP,,manual,0,2,0
+18.163.3.251,8191,HTTP,,manual,0,2,0
+18.163.3.251,29995,HTTP,,manual,0,2,0
+18.163.3.251,8095,HTTP,,manual,0,2,0
+18.163.3.251,13797,HTTP,,manual,0,2,0
+18.163.3.251,33181,HTTP,,manual,0,2,0
+18.163.3.251,30221,HTTP,,manual,0,2,0
+18.163.3.251,8096,HTTP,,manual,0,2,0
+43.198.99.209,9100,HTTP,,manual,0,2,0
+18.163.3.251,10031,HTTP,,manual,0,2,0

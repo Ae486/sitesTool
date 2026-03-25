@@ -1,5 +1,5 @@
 import { DeleteOutlined, EditOutlined, PlayCircleOutlined, StopOutlined } from "@ant-design/icons";
-import { Button, Popconfirm, Space, Table, Tag } from "antd";
+import { Button, Popconfirm, Space, Switch, Table, Tag } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useMemo } from "react";
 import type { AutomationFlow } from "../../types/flow";
@@ -14,9 +14,12 @@ interface FlowTableProps {
   onDelete: (flowId: number) => void;
   onTrigger: (flowId: number) => void;
   onStop: (flowId: number) => void;
+  onToggleProxy: (flow: AutomationFlow) => void;
   deleteLoading: boolean;
   stopLoading: boolean;
   stoppingFlowId?: number;
+  toggleProxyLoading: boolean;
+  togglingProxyFlowId?: number;
 }
 
 const FlowTable = ({
@@ -29,9 +32,12 @@ const FlowTable = ({
   onDelete,
   onTrigger,
   onStop,
+  onToggleProxy,
   deleteLoading,
   stopLoading,
   stoppingFlowId,
+  toggleProxyLoading,
+  togglingProxyFlowId,
 }: FlowTableProps) => {
   const columns: ColumnsType<AutomationFlow> = useMemo(
     () => [
@@ -67,6 +73,19 @@ const FlowTable = ({
           >
             {status || "未执行"}
           </Tag>
+        ),
+      },
+      {
+        title: "代理",
+        key: "proxy",
+        width: 80,
+        render: (_, flow) => (
+          <Switch
+            size="small"
+            checked={flow.use_proxy}
+            loading={toggleProxyLoading && togglingProxyFlowId === flow.id}
+            onChange={() => onToggleProxy(flow)}
+          />
         ),
       },
       {
@@ -123,7 +142,12 @@ const FlowTable = ({
         ),
       },
     ],
-    [siteNameMap, runningFlows, executingFlows, onEdit, onDelete, onTrigger, onStop, deleteLoading, stopLoading, stoppingFlowId]
+    [
+      siteNameMap, runningFlows, executingFlows,
+      onEdit, onDelete, onTrigger, onStop, onToggleProxy,
+      deleteLoading, stopLoading, stoppingFlowId,
+      toggleProxyLoading, togglingProxyFlowId,
+    ]
   );
 
   return (

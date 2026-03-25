@@ -193,37 +193,7 @@ const FlowFormModal = ({
     setWorkflowDrawerOpen(false);
   };
 
-  // Auto-save when closing (for editing existing flows)
-  const handleCancel = async () => {
-    // Only auto-save for existing flows with valid data
-    if (editingFlow) {
-      try {
-        // Flush visual editor changes
-        if (editMode === "visual") {
-          editorRef.current?.flush();
-          await new Promise((resolve) => requestAnimationFrame(resolve));
-        }
-
-        const values = form.getFieldsValue();
-        
-        // Parse DSL
-        let dsl: FlowDSL;
-        if (editMode === "json") {
-          dsl = typeof values.dsl === "string" ? JSON.parse(values.dsl) : values.dsl;
-        } else {
-          dsl = values.dsl;
-        }
-
-        // Only save if valid
-        const validation = validateDslStructure(dsl);
-        if (validation.valid && values.name && values.site_id) {
-          onSubmit(values, dsl);
-          return; // onSubmit will close the modal
-        }
-      } catch {
-        // Ignore errors, just close
-      }
-    }
+  const handleCancel = () => {
     onCancel();
   };
 

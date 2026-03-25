@@ -1,4 +1,4 @@
 -------------------------------------------------------------------------------
 Test set: com.rpacloud.proxy.service.ProxyHealthCheckerTest
 -------------------------------------------------------------------------------
-Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.200 s -- in com.rpacloud.proxy.service.ProxyHealthCheckerTest
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.164 s -- in com.rpacloud.proxy.service.ProxyHealthCheckerTest

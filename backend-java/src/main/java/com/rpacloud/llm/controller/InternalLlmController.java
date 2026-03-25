@@ -1,5 +1,6 @@
 package com.rpacloud.llm.controller;
 
+import java.util.Map;
 import java.util.UUID;
 
 import com.rpacloud.common.config.RpaProperties;
@@ -15,6 +16,7 @@ import com.rpacloud.llm.service.RateLimiter;
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -31,6 +33,33 @@ public class InternalLlmController {
     private final AccountService accountService;
     private final RateLimiter rateLimiter;
     private final RpaProperties rpaProperties;
+
+    @Value("${spring.ai.openai.api-key:}")
+    private String llmApiKey;
+
+    @Value("${spring.ai.openai.base-url:https://api.openai.com}")
+    private String llmBaseUrl;
+
+    @Value("${spring.ai.openai.chat.options.model:gpt-4o}")
+    private String llmDefaultModel;
+
+    @PostMapping("/credential")
+    public Map<String, String> credential(@RequestBody Map<String, String> req) {
+        String token = req.get("internal_token");
+        if (token == null || token.isBlank()) {
+            throw new BizException(ErrorCode.INVALID_INTERNAL_TOKEN, "Missing internal_token");
+        }
+        Claims claims = internalTokenProvider.validateAndParse(token);
+        if (claims == null) {
+            throw new BizException(ErrorCode.INVALID_INTERNAL_TOKEN, "Invalid or expired internal token");
+        }
+        log.info("Credential request: userId={}, executionId={}", claims.get("user_id"), claims.getSubject());
+        return Map.of(
+                "api_key", llmApiKey,
+                "base_url", llmBaseUrl,
+                "model", llmDefaultModel
+        );
+    }
 
     @PostMapping("/chat")
     public LlmChatResponse chat(@RequestBody InternalLlmRequest req) {
@@ -54,7 +83,7 @@ public class InternalLlmController {
         // Billing: freeze estimated tokens (skip if no billing account)
         String billingId = executionId + "-" + UUID.randomUUID().toString().substring(0, 8);
         long estimatedTokens = req.getMaxTokens() != null
-                ? req.getMaxTokens()
+                ? Math.max(req.getMaxTokens(), 1)
                 : rpaProperties.getLlm().getPreFreezePadding();
         boolean billed = false;
         try {

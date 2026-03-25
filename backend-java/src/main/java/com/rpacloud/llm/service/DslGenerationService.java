@@ -42,7 +42,7 @@ public class DslGenerationService {
             throw e;
         } catch (Exception e) {
             log.error("DSL generation failed: {}", e.getMessage(), e);
-            throw new BizException(ErrorCode.LLM_SERVICE_ERROR, "DSL generation failed: " + e.getMessage());
+            throw new BizException(ErrorCode.LLM_SERVICE_ERROR, "DSL generation failed");
         }
     }
 

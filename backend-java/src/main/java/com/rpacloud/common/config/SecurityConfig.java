@@ -29,8 +29,11 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/token", "/api/auth/bootstrap", "/api/auth/status").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/catalog/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/files/download").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/market/flows", "/api/market/flows/{id}").permitAll()
                         .requestMatchers("/healthz").permitAll()
-                        .requestMatchers("/internal/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/internal/**").permitAll()
+                        .requestMatchers("/ws/**").permitAll()
                         .requestMatchers("/", "/index.html", "/assets/**", "/favicon.ico", "/screenshots/**").permitAll()
                         .anyRequest().authenticated()
                 )

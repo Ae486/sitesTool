@@ -3,6 +3,8 @@ package com.rpacloud.execution.process;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.rpacloud.execution.worker.WorkerHandle;
+import com.rpacloud.execution.worker.WorkerKey;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -81,5 +83,34 @@ class ProcessManagerTest {
             pm.unregister(1L);
             pm.unregister(2L);
         }
+    }
+
+    // ---- Worker handle tracking (pooled path) ----
+
+    @Test
+    void registerWorker_andIsRunning() {
+        var worker = new WorkerHandle(new WorkerKey("chromium", true, null));
+        pm.registerWorker(10L, worker);
+        assertThat(pm.isRunning(10L)).isTrue();
+        assertThat(pm.getRunningFlowIds()).contains(10L);
+    }
+
+    @Test
+    void forceStopWorker_destroysHandle() {
+        var worker = new WorkerHandle(new WorkerKey("chromium", true, null));
+        pm.registerWorker(10L, worker);
+        assertThat(pm.isRunning(10L)).isTrue();
+        boolean stopped = pm.forceStop(10L);
+        assertThat(stopped).isTrue();
+        assertThat(worker.isDestroyed()).isTrue();
+        assertThat(pm.isRunning(10L)).isFalse();
+    }
+
+    @Test
+    void unregisterWorker() {
+        var worker = new WorkerHandle(new WorkerKey("chromium", true, null));
+        pm.registerWorker(10L, worker);
+        pm.unregisterWorker(10L);
+        assertThat(pm.isRunning(10L)).isFalse();
     }
 }

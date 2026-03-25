@@ -13,6 +13,7 @@ public record ProxyResponse(
         int successCount,
         int failCount,
         int avgLatencyMs,
+        Boolean lastCheckSuccess,
         LocalDateTime lastCheckedAt
 ) {
 }

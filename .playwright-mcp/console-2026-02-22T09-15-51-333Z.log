@@ -1,0 +1,51 @@
+[     303ms] [ERROR] Warning: [antd: Card] `bordered` is deprecated. Please use `variant` instead. @ http://localhost:5173/node_modules/.vite/deps/chunk-WLX6G6LQ.js?v=3b35b5f6:1247
+[     313ms] [ERROR] Warning: [antd: Card] `headStyle` is deprecated. Please use `styles.header` instead. @ http://localhost:5173/node_modules/.vite/deps/chunk-WLX6G6LQ.js?v=3b35b5f6:1247
+[     348ms] [WARNING] ⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition. @ http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=3b35b5f6:4412
+[     349ms] [WARNING] ⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath. @ http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=3b35b5f6:4412
+[   19266ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ http://localhost:8000/api/proxy/stats:0
+[   19267ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ http://localhost:8000/api/proxy?skip=0&limit=20:0
+[   20287ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ http://localhost:8000/api/proxy/stats:0
+[   20288ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ http://localhost:8000/api/proxy?skip=0&limit=20:0
+[   22298ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ http://localhost:8000/api/proxy/stats:0
+[   22298ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ http://localhost:8000/api/proxy?skip=0&limit=20:0
+[   26308ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ http://localhost:8000/api/proxy/stats:0
+[   26309ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ http://localhost:8000/api/proxy?skip=0&limit=20:0
+[   56330ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ http://localhost:8000/api/proxy?skip=0&limit=20:0
+[   56331ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ http://localhost:8000/api/proxy/stats:0
+[   57336ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ http://localhost:8000/api/proxy?skip=0&limit=20:0
+[   57337ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ http://localhost:8000/api/proxy/stats:0
+[   59347ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ http://localhost:8000/api/proxy?skip=0&limit=20:0
+[   59348ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ http://localhost:8000/api/proxy/stats:0
+[   63358ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ http://localhost:8000/api/proxy/stats:0
+[   63359ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ http://localhost:8000/api/proxy?skip=0&limit=20:0
+[   67650ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ http://localhost:8000/api/proxy/tunnel-configs:0
+[   68422ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ http://localhost:8000/api/proxy/stats:0
+[   68423ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ http://localhost:8000/api/proxy?skip=0&limit=20:0
+[   68943ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ http://localhost:8000/api/proxy/tunnel-configs:0
+[   69948ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ http://localhost:8000/api/proxy/tunnel-configs:0
+[   71203ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ http://localhost:8000/api/proxy/stats:0
+[   71203ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ http://localhost:8000/api/proxy?skip=0&limit=20:0
+[   72175ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ http://localhost:8000/api/proxy/tunnel-configs:0
+[   73181ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ http://localhost:8000/api/proxy/tunnel-configs:0
+[   74030ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ http://localhost:8000/api/proxy/stats:0
+[   74031ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ http://localhost:8000/api/proxy?skip=0&limit=20:0
+[   75038ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ http://localhost:8000/api/proxy/stats:0
+[   75039ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ http://localhost:8000/api/proxy?skip=0&limit=20:0
+[   77044ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ http://localhost:8000/api/proxy?skip=0&limit=20:0
+[   77045ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ http://localhost:8000/api/proxy/stats:0
+[   81050ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ http://localhost:8000/api/proxy?skip=0&limit=20:0
+[   81051ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ http://localhost:8000/api/proxy/stats:0
+[   81156ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ http://localhost:8000/api/proxy/tunnel-configs:0
+[   81867ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ http://localhost:8000/api/proxy?skip=0&limit=20:0
+[   81867ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ http://localhost:8000/api/proxy/stats:0
+[   82873ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ http://localhost:8000/api/proxy?skip=0&limit=20:0
+[   82873ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ http://localhost:8000/api/proxy/stats:0
+[   84881ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ http://localhost:8000/api/proxy?skip=0&limit=20:0
+[   84881ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ http://localhost:8000/api/proxy/stats:0
+[   85288ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ http://localhost:8000/api/proxy/tunnel-configs:0
+[   88885ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ http://localhost:8000/api/proxy?skip=0&limit=20:0
+[   88898ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ http://localhost:8000/api/proxy/stats:0
+[   95579ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ http://localhost:8000/api/proxy/api-configs:0
+[   96594ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ http://localhost:8000/api/proxy/api-configs:0
+[   98599ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ http://localhost:8000/api/proxy/api-configs:0
+[  102604ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ http://localhost:8000/api/proxy/api-configs:0

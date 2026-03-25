@@ -62,7 +62,8 @@ public class AccountService {
 
         long balanceAfter = account.getBalance() - actualTokens;
         if (balanceAfter < 0) {
-            log.warn("Balance went negative for user {}: {} - {} = {}", userId, account.getBalance(), actualTokens, balanceAfter);
+            log.warn("Balance capped at 0 for user {}: {} - {} = {}", userId, account.getBalance(), actualTokens, balanceAfter);
+            balanceAfter = 0;
         }
         account.setBalance(balanceAfter);
         accountRepo.save(account);

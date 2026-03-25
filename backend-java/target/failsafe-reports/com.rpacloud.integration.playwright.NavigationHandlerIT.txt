@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: com.rpacloud.integration.playwright.NavigationHandlerIT
--------------------------------------------------------------------------------
-Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.975 s -- in com.rpacloud.integration.playwright.NavigationHandlerIT

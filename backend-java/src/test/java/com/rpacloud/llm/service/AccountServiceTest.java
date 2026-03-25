@@ -175,6 +175,19 @@ class AccountServiceTest {
     }
 
     @Test
+    void settleBalanceCappedAtZero() {
+        Account account = makeAccount(1L, 100L, 500L);
+        when(accountRepo.findByUserIdForUpdate(1L)).thenReturn(Optional.of(account));
+        when(txRepo.existsByIdempotencyKey("exec-cap:settle")).thenReturn(false);
+        when(accountRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        accountService.settle(1L, "exec-cap", 300L, 500L);
+
+        assertThat(account.getBalance()).isEqualTo(0L);
+        assertThat(account.getFrozen()).isEqualTo(0L);
+    }
+
+    @Test
     void getAccountReturnsNullIfNotFound() {
         when(accountRepo.findByUserId(99L)).thenReturn(Optional.empty());
 

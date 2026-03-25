@@ -150,6 +150,13 @@ const FlowsPage = () => {
     onError: () => message.error("停止失败"),
   });
 
+  const toggleProxyMutation = useMutation({
+    mutationFn: (flow: AutomationFlow) =>
+      updateFlow(flow.id, { use_proxy: !flow.use_proxy } as any),
+    onSuccess: () => refetch(),
+    onError: () => message.error("代理切换失败"),
+  });
+
   // Handlers
   const handleEdit = (flow: AutomationFlow) => {
     setEditingFlow(flow);
@@ -165,6 +172,9 @@ const FlowsPage = () => {
       use_cdp_mode: flow.use_cdp_mode,
       cdp_port: flow.cdp_port,
       cdp_user_data_dir: flow.cdp_user_data_dir,
+      use_proxy: flow.use_proxy ?? false,
+      proxy_id: flow.proxy_id ?? null,
+      _proxy_mode: flow.proxy_id ? "specific" : "auto",
     });
     setModalOpen(true);
   };
@@ -182,6 +192,9 @@ const FlowsPage = () => {
       use_cdp_mode: false,
       cdp_port: 9222,
       cdp_user_data_dir: undefined,
+      use_proxy: false,
+      proxy_id: null,
+      _proxy_mode: "auto",
     });
     setModalOpen(true);
   };
@@ -191,10 +204,11 @@ const FlowsPage = () => {
   };
 
   const handleModalSubmit = (values: any, dsl: FlowDSL) => {
+    const { _proxy_mode, ...payload } = values;
     if (editingFlow) {
-      updateMutation.mutate({ id: editingFlow.id, data: { ...values, dsl } });
+      updateMutation.mutate({ id: editingFlow.id, data: { ...payload, dsl } });
     } else {
-      createMutation.mutate({ ...values, dsl });
+      createMutation.mutate({ ...payload, dsl });
     }
   };
 
@@ -228,9 +242,12 @@ const FlowsPage = () => {
           onDelete={(id) => deleteMutation.mutate(id)}
           onTrigger={(id) => triggerMutation.mutate(id)}
           onStop={(id) => stopMutation.mutate(id)}
+          onToggleProxy={(flow) => toggleProxyMutation.mutate(flow)}
           deleteLoading={deleteMutation.isPending}
           stopLoading={stopMutation.isPending}
           stoppingFlowId={stopMutation.variables}
+          toggleProxyLoading={toggleProxyMutation.isPending}
+          togglingProxyFlowId={toggleProxyMutation.variables?.id}
         />
       </motion.div>
 

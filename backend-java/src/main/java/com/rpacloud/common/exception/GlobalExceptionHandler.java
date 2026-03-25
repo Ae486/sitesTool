@@ -48,6 +48,12 @@ public class GlobalExceptionHandler {
                 ));
     }
 
+    @ExceptionHandler(SecurityException.class)
+    public ResponseEntity<Map<String, String>> handleSecurity(SecurityException ex) {
+        return ResponseEntity.badRequest()
+                .body(Map.of("code", "SECURITY_VIOLATION", "message", ex.getMessage()));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> handleGeneric(Exception ex) {
         log.error("Unhandled exception", ex);

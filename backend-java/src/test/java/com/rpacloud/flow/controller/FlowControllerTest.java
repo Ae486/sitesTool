@@ -27,7 +27,9 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.multipart.MultipartFile;
 
 @WebMvcTest(FlowController.class)
 @AutoConfigureMockMvc(addFilters = false)
@@ -131,5 +133,40 @@ class FlowControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.running_flows").isArray())
                 .andExpect(jsonPath("$.running_flows").isEmpty());
+    }
+
+    // --- Export/Import controller tests ---
+
+    @Test
+    void exportFlow_returnsJsonAttachment() throws Exception {
+        byte[] exportedJson = "{\"format_version\":1,\"name\":\"Test\"}".getBytes();
+        when(flowService.exportFlow(1L)).thenReturn(exportedJson);
+        when(flowService.getById(1L)).thenReturn(sampleFlow());
+
+        mockMvc.perform(get("/api/flows/1/export"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Disposition", org.hamcrest.Matchers.containsString("attachment")))
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(content().json("{\"format_version\":1,\"name\":\"Test\"}"));
+    }
+
+    @Test
+    void importFlow_returns201() throws Exception {
+        FlowResponse imported = FlowResponse.builder()
+                .id(10L).siteId(1L).name("Imported (imported)")
+                .dsl(Map.of("steps", List.of())).lastStatus(FlowStatus.idle).isActive(true)
+                .headless(true).browserType("chromium").useCdpMode(false).cdpPort(9222)
+                .createdAt(LocalDateTime.of(2025, 1, 1, 0, 0))
+                .updatedAt(LocalDateTime.of(2025, 1, 1, 0, 0))
+                .build();
+        when(flowService.importFlow(any(MultipartFile.class))).thenReturn(imported);
+
+        MockMultipartFile file = new MockMultipartFile("file", "flow.json", "application/json",
+                "{\"format_version\":1,\"name\":\"Test\",\"dsl\":{\"steps\":[]}}".getBytes());
+
+        mockMvc.perform(multipart("/api/flows/import").file(file))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value(10))
+                .andExpect(jsonPath("$.name").value("Imported (imported)"));
     }
 }

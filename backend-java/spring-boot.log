@@ -1,0 +1,879 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] -----------------------< com.rpacloud:rpa-cloud >-----------------------
+[INFO] Building RPA Cloud 0.1.0-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] >>> spring-boot:3.3.11:run (default-cli) > test-compile @ rpa-cloud >>>
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ rpa-cloud ---
+[INFO] Copying 2 resources from src\main\resources to target\classes
+[INFO] Copying 9 resources from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ rpa-cloud ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ rpa-cloud ---
+[INFO] Copying 6 resources from src\test\resources to target\test-classes
+[INFO] 
+[INFO] --- compiler:3.13.0:testCompile (default-testCompile) @ rpa-cloud ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] <<< spring-boot:3.3.11:run (default-cli) < test-compile @ rpa-cloud <<<
+[INFO] 
+[INFO] 
+[INFO] --- spring-boot:3.3.11:run (default-cli) @ rpa-cloud ---
+[INFO] Attaching agents: []
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::               (v3.3.11)
+
+2026-03-21T01:22:58.010+08:00  INFO 37868 --- [           main] com.rpacloud.RpaCloudApplication         : Starting RpaCloudApplication using Java 17.0.10 with PID 37868 (H:\autoTool\backend-java\target\classes started by 55473 in H:\autoTool\backend-java)
+2026-03-21T01:22:58.012+08:00  INFO 37868 --- [           main] com.rpacloud.RpaCloudApplication         : The following 2 profiles are active: "dev", "enterprise"
+2026-03-21T01:22:58.648+08:00  INFO 37868 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Multiple Spring Data modules found, entering strict repository configuration mode
+2026-03-21T01:22:58.650+08:00  INFO 37868 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-03-21T01:22:58.777+08:00  INFO 37868 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 122 ms. Found 13 JPA repository interfaces.
+2026-03-21T01:22:58.787+08:00  INFO 37868 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Multiple Spring Data modules found, entering strict repository configuration mode
+2026-03-21T01:22:58.788+08:00  INFO 37868 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data Redis repositories in DEFAULT mode.
+2026-03-21T01:22:58.810+08:00  INFO 37868 --- [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.rpacloud.catalog.repository.CategoryRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-03-21T01:22:58.810+08:00  INFO 37868 --- [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.rpacloud.catalog.repository.TagRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-03-21T01:22:58.810+08:00  INFO 37868 --- [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.rpacloud.flow.repository.FlowRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-03-21T01:22:58.811+08:00  INFO 37868 --- [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.rpacloud.history.repository.HistoryRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-03-21T01:22:58.811+08:00  INFO 37868 --- [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.rpacloud.llm.repository.AccountRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-03-21T01:22:58.811+08:00  INFO 37868 --- [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.rpacloud.llm.repository.TransactionRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-03-21T01:22:58.811+08:00  INFO 37868 --- [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.rpacloud.market.repository.MarketplaceFlowRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-03-21T01:22:58.811+08:00  INFO 37868 --- [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.rpacloud.proxy.repository.ProxyApiConfigRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-03-21T01:22:58.811+08:00  INFO 37868 --- [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.rpacloud.proxy.repository.ProxyHealthLogRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-03-21T01:22:58.812+08:00  INFO 37868 --- [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.rpacloud.proxy.repository.ProxyRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-03-21T01:22:58.812+08:00  INFO 37868 --- [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.rpacloud.proxy.repository.TunnelProxyConfigRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-03-21T01:22:58.812+08:00  INFO 37868 --- [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.rpacloud.site.repository.SiteRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-03-21T01:22:58.812+08:00  INFO 37868 --- [           main] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.rpacloud.user.repository.UserRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-03-21T01:22:58.812+08:00  INFO 37868 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 19 ms. Found 0 Redis repository interfaces.
+2026-03-21T01:22:59.325+08:00  INFO 37868 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8000 (http)
+2026-03-21T01:22:59.338+08:00  INFO 37868 --- [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-03-21T01:22:59.338+08:00  INFO 37868 --- [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.40]
+2026-03-21T01:22:59.396+08:00  INFO 37868 --- [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-03-21T01:22:59.396+08:00  INFO 37868 --- [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 1356 ms
+2026-03-21T01:22:59.548+08:00  INFO 37868 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-03-21T01:22:59.652+08:00  INFO 37868 --- [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@64f3991e
+2026-03-21T01:22:59.653+08:00  INFO 37868 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-03-21T01:22:59.686+08:00  INFO 37868 --- [           main] org.flywaydb.core.FlywayExecutor         : Database: jdbc:mysql://localhost:3306/rpa_cloud (MySQL 8.0)
+2026-03-21T01:22:59.734+08:00  INFO 37868 --- [           main] o.f.core.internal.command.DbValidate     : Successfully validated 9 migrations (execution time 00:00.029s)
+2026-03-21T01:22:59.748+08:00  INFO 37868 --- [           main] o.f.core.internal.command.DbMigrate      : Current version of schema `rpa_cloud`: 9
+2026-03-21T01:22:59.749+08:00  WARN 37868 --- [           main] o.f.core.internal.command.DbMigrate      : outOfOrder mode is active. Migration of schema `rpa_cloud` may not be reproducible.
+2026-03-21T01:22:59.751+08:00  INFO 37868 --- [           main] o.f.core.internal.command.DbMigrate      : Schema `rpa_cloud` is up to date. No migration necessary.
+2026-03-21T01:22:59.815+08:00  INFO 37868 --- [           main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-03-21T01:22:59.865+08:00  INFO 37868 --- [           main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.5.3.Final
+2026-03-21T01:22:59.892+08:00  INFO 37868 --- [           main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-03-21T01:23:00.100+08:00  INFO 37868 --- [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-03-21T01:23:00.992+08:00  INFO 37868 --- [           main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-03-21T01:23:01.021+08:00  INFO 37868 --- [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-03-21T01:23:01.458+08:00  INFO 37868 --- [           main] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-03-21T01:23:01.761+08:00  WARN 37868 --- [           main] c.r.llm.service.InternalTokenProvider    : Using default internal token secret ¡ª set rpa.llm.internal-token-secret in production!
+2026-03-21T01:23:01.789+08:00  INFO 37868 --- [           main] org.quartz.impl.StdSchedulerFactory      : Using default implementation for ThreadExecutor
+2026-03-21T01:23:01.796+08:00  INFO 37868 --- [           main] org.quartz.core.SchedulerSignalerImpl    : Initialized Scheduler Signaller of type: class org.quartz.core.SchedulerSignalerImpl
+2026-03-21T01:23:01.797+08:00  INFO 37868 --- [           main] org.quartz.core.QuartzScheduler          : Quartz Scheduler v.2.3.2 created.
+2026-03-21T01:23:01.797+08:00  INFO 37868 --- [           main] org.quartz.simpl.RAMJobStore             : RAMJobStore initialized.
+2026-03-21T01:23:01.798+08:00  INFO 37868 --- [           main] org.quartz.core.QuartzScheduler          : Scheduler meta-data: Quartz Scheduler (v2.3.2) 'quartzScheduler' with instanceId 'NON_CLUSTERED'
+  Scheduler class: 'org.quartz.core.QuartzScheduler' - running locally.
+  NOT STARTED.
+  Currently in standby mode.
+  Number of jobs executed: 0
+  Using thread pool 'org.quartz.simpl.SimpleThreadPool' - with 3 threads.
+  Using job-store 'org.quartz.simpl.RAMJobStore' - which does not support persistence. and is not clustered.
+
+2026-03-21T01:23:01.798+08:00  INFO 37868 --- [           main] org.quartz.impl.StdSchedulerFactory      : Quartz scheduler 'quartzScheduler' initialized from an externally provided properties instance.
+2026-03-21T01:23:01.798+08:00  INFO 37868 --- [           main] org.quartz.impl.StdSchedulerFactory      : Quartz scheduler version: 2.3.2
+2026-03-21T01:23:01.798+08:00  INFO 37868 --- [           main] org.quartz.core.QuartzScheduler          : JobFactory set to: org.springframework.scheduling.quartz.SpringBeanJobFactory@70f0a3a3
+2026-03-21T01:23:02.161+08:00  WARN 37868 --- [           main] .s.s.UserDetailsServiceAutoConfiguration : 
+
+Using generated security password: 63838fee-b56f-40f8-ab05-c95f078f52dd
+
+This generated password is for development use only. Your security configuration must be updated before running your application in production.
+
+2026-03-21T01:23:02.166+08:00  INFO 37868 --- [           main] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name inMemoryUserDetailsManager
+2026-03-21T01:23:02.544+08:00  INFO 37868 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8000 (http) with context path '/'
+2026-03-21T01:23:02.545+08:00  INFO 37868 --- [           main] o.s.s.quartz.SchedulerFactoryBean        : Starting Quartz Scheduler now
+2026-03-21T01:23:02.545+08:00  INFO 37868 --- [           main] org.quartz.core.QuartzScheduler          : Scheduler quartzScheduler_$_NON_CLUSTERED started.
+2026-03-21T01:23:02.551+08:00  INFO 37868 --- [           main] com.rpacloud.RpaCloudApplication         : Started RpaCloudApplication in 4.822 seconds (process running for 5.057)
+2026-03-21T01:23:09.424+08:00  INFO 37868 --- [nio-8000-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-03-21T01:23:09.424+08:00  INFO 37868 --- [nio-8000-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-03-21T01:23:09.425+08:00  INFO 37868 --- [nio-8000-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 1 ms
+2026-03-21T01:23:09.494+08:00 DEBUG 37868 --- [nio-8000-exec-1] org.hibernate.SQL                        : 
+    select
+        count(*) 
+    from
+        proxy p1_0
+Hibernate: 
+    select
+        count(*) 
+    from
+        proxy p1_0
+2026-03-21T01:23:09.508+08:00 DEBUG 37868 --- [nio-8000-exec-1] org.hibernate.SQL                        : 
+    select
+        count(p1_0.id) 
+    from
+        proxy p1_0 
+    where
+        p1_0.is_active
+Hibernate: 
+    select
+        count(p1_0.id) 
+    from
+        proxy p1_0 
+    where
+        p1_0.is_active
+2026-03-21T01:26:15.178+08:00 DEBUG 37868 --- [nio-8000-exec-3] org.hibernate.SQL                        : 
+    select
+        s1_0.id 
+    from
+        sites s1_0 
+    limit
+        ?
+Hibernate: 
+    select
+        s1_0.id 
+    from
+        sites s1_0 
+    limit
+        ?
+2026-03-21T01:26:15.187+08:00 DEBUG 37868 --- [nio-8000-exec-2] org.hibernate.SQL                        : 
+    select
+        af1_0.id,
+        af1_0.browser_path,
+        af1_0.browser_type,
+        af1_0.cdp_port,
+        af1_0.cdp_user_data_dir,
+        af1_0.created_at,
+        af1_0.cron_expression,
+        af1_0.description,
+        af1_0.dsl,
+        af1_0.headless,
+        af1_0.is_active,
+        af1_0.last_status,
+        af1_0.name,
+        af1_0.proxy_id,
+        af1_0.site_id,
+        af1_0.updated_at,
+        af1_0.use_cdp_mode,
+        af1_0.use_proxy 
+    from
+        automation_flows af1_0 
+    limit
+        ?, ?
+Hibernate: 
+    select
+        af1_0.id,
+        af1_0.browser_path,
+        af1_0.browser_type,
+        af1_0.cdp_port,
+        af1_0.cdp_user_data_dir,
+        af1_0.created_at,
+        af1_0.cron_expression,
+        af1_0.description,
+        af1_0.dsl,
+        af1_0.headless,
+        af1_0.is_active,
+        af1_0.last_status,
+        af1_0.name,
+        af1_0.proxy_id,
+        af1_0.site_id,
+        af1_0.updated_at,
+        af1_0.use_cdp_mode,
+        af1_0.use_proxy 
+    from
+        automation_flows af1_0 
+    limit
+        ?, ?
+2026-03-21T01:26:15.187+08:00 DEBUG 37868 --- [nio-8000-exec-4] org.hibernate.SQL                        : 
+    select
+        p1_0.id,
+        p1_0.avg_latency_ms,
+        p1_0.created_at,
+        p1_0.fail_count,
+        p1_0.ip,
+        p1_0.is_active,
+        p1_0.last_check_success,
+        p1_0.last_checked_at,
+        p1_0.port,
+        p1_0.protocol,
+        p1_0.provider,
+        p1_0.region,
+        p1_0.success_count 
+    from
+        proxy p1_0 
+    order by
+        p1_0.id desc 
+    limit
+        ?, ?
+Hibernate: 
+    select
+        p1_0.id,
+        p1_0.avg_latency_ms,
+        p1_0.created_at,
+        p1_0.fail_count,
+        p1_0.ip,
+        p1_0.is_active,
+        p1_0.last_check_success,
+        p1_0.last_checked_at,
+        p1_0.port,
+        p1_0.protocol,
+        p1_0.provider,
+        p1_0.region,
+        p1_0.success_count 
+    from
+        proxy p1_0 
+    order by
+        p1_0.id desc 
+    limit
+        ?, ?
+2026-03-21T01:26:15.213+08:00 DEBUG 37868 --- [nio-8000-exec-3] org.hibernate.SQL                        : 
+    select
+        distinct s1_0.id,
+        c1_0.id,
+        c1_0.created_at,
+        c1_0.description,
+        c1_0.name,
+        c1_0.updated_at,
+        s1_0.category_id,
+        s1_0.created_at,
+        s1_0.description,
+        s1_0.is_active,
+        s1_0.name,
+        s1_0.sort_order,
+        t1_0.site_id,
+        t1_1.id,
+        t1_1.color,
+        t1_1.created_at,
+        t1_1.name,
+        t1_1.updated_at,
+        s1_0.updated_at,
+        s1_0.url 
+    from
+        sites s1_0 
+    left join
+        site_tag_links t1_0 
+            on s1_0.id=t1_0.site_id 
+    left join
+        tags t1_1 
+            on t1_1.id=t1_0.tag_id 
+    left join
+        categories c1_0 
+            on c1_0.id=s1_0.category_id 
+    where
+        s1_0.id in (?) 
+    order by
+        s1_0.id
+Hibernate: 
+    select
+        distinct s1_0.id,
+        c1_0.id,
+        c1_0.created_at,
+        c1_0.description,
+        c1_0.name,
+        c1_0.updated_at,
+        s1_0.category_id,
+        s1_0.created_at,
+        s1_0.description,
+        s1_0.is_active,
+        s1_0.name,
+        s1_0.sort_order,
+        t1_0.site_id,
+        t1_1.id,
+        t1_1.color,
+        t1_1.created_at,
+        t1_1.name,
+        t1_1.updated_at,
+        s1_0.updated_at,
+        s1_0.url 
+    from
+        sites s1_0 
+    left join
+        site_tag_links t1_0 
+            on s1_0.id=t1_0.site_id 
+    left join
+        tags t1_1 
+            on t1_1.id=t1_0.tag_id 
+    left join
+        categories c1_0 
+            on c1_0.id=s1_0.category_id 
+    where
+        s1_0.id in (?) 
+    order by
+        s1_0.id
+2026-03-21T01:26:16.195+08:00 DEBUG 37868 --- [nio-8000-exec-9] org.hibernate.SQL                        : 
+    select
+        af1_0.id,
+        af1_0.browser_path,
+        af1_0.browser_type,
+        af1_0.cdp_port,
+        af1_0.cdp_user_data_dir,
+        af1_0.created_at,
+        af1_0.cron_expression,
+        af1_0.description,
+        af1_0.dsl,
+        af1_0.headless,
+        af1_0.is_active,
+        af1_0.last_status,
+        af1_0.name,
+        af1_0.proxy_id,
+        af1_0.site_id,
+        af1_0.updated_at,
+        af1_0.use_cdp_mode,
+        af1_0.use_proxy 
+    from
+        automation_flows af1_0 
+    limit
+        ?, ?
+Hibernate: 
+    select
+        af1_0.id,
+        af1_0.browser_path,
+        af1_0.browser_type,
+        af1_0.cdp_port,
+        af1_0.cdp_user_data_dir,
+        af1_0.created_at,
+        af1_0.cron_expression,
+        af1_0.description,
+        af1_0.dsl,
+        af1_0.headless,
+        af1_0.is_active,
+        af1_0.last_status,
+        af1_0.name,
+        af1_0.proxy_id,
+        af1_0.site_id,
+        af1_0.updated_at,
+        af1_0.use_cdp_mode,
+        af1_0.use_proxy 
+    from
+        automation_flows af1_0 
+    limit
+        ?, ?
+2026-03-21T01:26:16.197+08:00 DEBUG 37868 --- [nio-8000-exec-8] org.hibernate.SQL                        : 
+    select
+        s1_0.id 
+    from
+        sites s1_0 
+    limit
+        ?
+Hibernate: 
+    select
+        s1_0.id 
+    from
+        sites s1_0 
+    limit
+        ?
+2026-03-21T01:26:16.201+08:00 DEBUG 37868 --- [nio-8000-exec-8] org.hibernate.SQL                        : 
+    select
+        distinct s1_0.id,
+        c1_0.id,
+        c1_0.created_at,
+        c1_0.description,
+        c1_0.name,
+        c1_0.updated_at,
+        s1_0.category_id,
+        s1_0.created_at,
+        s1_0.description,
+        s1_0.is_active,
+        s1_0.name,
+        s1_0.sort_order,
+        t1_0.site_id,
+        t1_1.id,
+        t1_1.color,
+        t1_1.created_at,
+        t1_1.name,
+        t1_1.updated_at,
+        s1_0.updated_at,
+        s1_0.url 
+    from
+        sites s1_0 
+    left join
+        site_tag_links t1_0 
+            on s1_0.id=t1_0.site_id 
+    left join
+        tags t1_1 
+            on t1_1.id=t1_0.tag_id 
+    left join
+        categories c1_0 
+            on c1_0.id=s1_0.category_id 
+    where
+        s1_0.id in (?) 
+    order by
+        s1_0.id
+Hibernate: 
+    select
+        distinct s1_0.id,
+        c1_0.id,
+        c1_0.created_at,
+        c1_0.description,
+        c1_0.name,
+        c1_0.updated_at,
+        s1_0.category_id,
+        s1_0.created_at,
+        s1_0.description,
+        s1_0.is_active,
+        s1_0.name,
+        s1_0.sort_order,
+        t1_0.site_id,
+        t1_1.id,
+        t1_1.color,
+        t1_1.created_at,
+        t1_1.name,
+        t1_1.updated_at,
+        s1_0.updated_at,
+        s1_0.url 
+    from
+        sites s1_0 
+    left join
+        site_tag_links t1_0 
+            on s1_0.id=t1_0.site_id 
+    left join
+        tags t1_1 
+            on t1_1.id=t1_0.tag_id 
+    left join
+        categories c1_0 
+            on c1_0.id=s1_0.category_id 
+    where
+        s1_0.id in (?) 
+    order by
+        s1_0.id
+2026-03-21T01:26:18.929+08:00 DEBUG 37868 --- [nio-8000-exec-4] org.hibernate.SQL                        : 
+    select
+        af1_0.id,
+        af1_0.browser_path,
+        af1_0.browser_type,
+        af1_0.cdp_port,
+        af1_0.cdp_user_data_dir,
+        af1_0.created_at,
+        af1_0.cron_expression,
+        af1_0.description,
+        af1_0.dsl,
+        af1_0.headless,
+        af1_0.is_active,
+        af1_0.last_status,
+        af1_0.name,
+        af1_0.proxy_id,
+        af1_0.site_id,
+        af1_0.updated_at,
+        af1_0.use_cdp_mode,
+        af1_0.use_proxy 
+    from
+        automation_flows af1_0 
+    where
+        af1_0.id=?
+Hibernate: 
+    select
+        af1_0.id,
+        af1_0.browser_path,
+        af1_0.browser_type,
+        af1_0.cdp_port,
+        af1_0.cdp_user_data_dir,
+        af1_0.created_at,
+        af1_0.cron_expression,
+        af1_0.description,
+        af1_0.dsl,
+        af1_0.headless,
+        af1_0.is_active,
+        af1_0.last_status,
+        af1_0.name,
+        af1_0.proxy_id,
+        af1_0.site_id,
+        af1_0.updated_at,
+        af1_0.use_cdp_mode,
+        af1_0.use_proxy 
+    from
+        automation_flows af1_0 
+    where
+        af1_0.id=?
+2026-03-21T01:26:19.028+08:00  INFO 37868 --- [nio-8000-exec-4] c.r.e.process.AutomationExecutor         : Triggering flow 3 with execution_id 220c5190dbd043d89d9be8e5b279480f
+2026-03-21T01:26:19.120+08:00  INFO 37868 --- [nio-8000-exec-4] c.r.execution.process.ProcessManager     : Registered process for flow 3, PID: 13872
+2026-03-21T01:26:19.129+08:00 DEBUG 37868 --- [nio-8000-exec-4] org.hibernate.SQL                        : 
+    select
+        af1_0.id,
+        af1_0.browser_path,
+        af1_0.browser_type,
+        af1_0.cdp_port,
+        af1_0.cdp_user_data_dir,
+        af1_0.created_at,
+        af1_0.cron_expression,
+        af1_0.description,
+        af1_0.dsl,
+        af1_0.headless,
+        af1_0.is_active,
+        af1_0.last_status,
+        af1_0.name,
+        af1_0.proxy_id,
+        af1_0.site_id,
+        af1_0.updated_at,
+        af1_0.use_cdp_mode,
+        af1_0.use_proxy 
+    from
+        automation_flows af1_0 
+    where
+        af1_0.id=?
+Hibernate: 
+    select
+        af1_0.id,
+        af1_0.browser_path,
+        af1_0.browser_type,
+        af1_0.cdp_port,
+        af1_0.cdp_user_data_dir,
+        af1_0.created_at,
+        af1_0.cron_expression,
+        af1_0.description,
+        af1_0.dsl,
+        af1_0.headless,
+        af1_0.is_active,
+        af1_0.last_status,
+        af1_0.name,
+        af1_0.proxy_id,
+        af1_0.site_id,
+        af1_0.updated_at,
+        af1_0.use_cdp_mode,
+        af1_0.use_proxy 
+    from
+        automation_flows af1_0 
+    where
+        af1_0.id=?
+2026-03-21T01:26:19.189+08:00 DEBUG 37868 --- [nio-8000-exec-4] org.hibernate.SQL                        : 
+    update
+        automation_flows 
+    set
+        browser_path=?,
+        browser_type=?,
+        cdp_port=?,
+        cdp_user_data_dir=?,
+        cron_expression=?,
+        description=?,
+        dsl=?,
+        headless=?,
+        is_active=?,
+        last_status=?,
+        name=?,
+        proxy_id=?,
+        site_id=?,
+        updated_at=?,
+        use_cdp_mode=?,
+        use_proxy=? 
+    where
+        id=?
+Hibernate: 
+    update
+        automation_flows 
+    set
+        browser_path=?,
+        browser_type=?,
+        cdp_port=?,
+        cdp_user_data_dir=?,
+        cron_expression=?,
+        description=?,
+        dsl=?,
+        headless=?,
+        is_active=?,
+        last_status=?,
+        name=?,
+        proxy_id=?,
+        site_id=?,
+        updated_at=?,
+        use_cdp_mode=?,
+        use_proxy=? 
+    where
+        id=?
+2026-03-21T01:26:40.279+08:00 DEBUG 37868 --- [nio-8000-exec-7] org.hibernate.SQL                        : 
+    select
+        s1_0.id 
+    from
+        sites s1_0 
+    limit
+        ?
+Hibernate: 
+    select
+        s1_0.id 
+    from
+        sites s1_0 
+    limit
+        ?
+2026-03-21T01:26:40.280+08:00 DEBUG 37868 --- [nio-8000-exec-5] org.hibernate.SQL                        : 
+    select
+        af1_0.id,
+        af1_0.browser_path,
+        af1_0.browser_type,
+        af1_0.cdp_port,
+        af1_0.cdp_user_data_dir,
+        af1_0.created_at,
+        af1_0.cron_expression,
+        af1_0.description,
+        af1_0.dsl,
+        af1_0.headless,
+        af1_0.is_active,
+        af1_0.last_status,
+        af1_0.name,
+        af1_0.proxy_id,
+        af1_0.site_id,
+        af1_0.updated_at,
+        af1_0.use_cdp_mode,
+        af1_0.use_proxy 
+    from
+        automation_flows af1_0 
+    limit
+        ?, ?
+Hibernate: 
+    select
+        af1_0.id,
+        af1_0.browser_path,
+        af1_0.browser_type,
+        af1_0.cdp_port,
+        af1_0.cdp_user_data_dir,
+        af1_0.created_at,
+        af1_0.cron_expression,
+        af1_0.description,
+        af1_0.dsl,
+        af1_0.headless,
+        af1_0.is_active,
+        af1_0.last_status,
+        af1_0.name,
+        af1_0.proxy_id,
+        af1_0.site_id,
+        af1_0.updated_at,
+        af1_0.use_cdp_mode,
+        af1_0.use_proxy 
+    from
+        automation_flows af1_0 
+    limit
+        ?, ?
+2026-03-21T01:26:40.287+08:00 DEBUG 37868 --- [nio-8000-exec-7] org.hibernate.SQL                        : 
+    select
+        distinct s1_0.id,
+        c1_0.id,
+        c1_0.created_at,
+        c1_0.description,
+        c1_0.name,
+        c1_0.updated_at,
+        s1_0.category_id,
+        s1_0.created_at,
+        s1_0.description,
+        s1_0.is_active,
+        s1_0.name,
+        s1_0.sort_order,
+        t1_0.site_id,
+        t1_1.id,
+        t1_1.color,
+        t1_1.created_at,
+        t1_1.name,
+        t1_1.updated_at,
+        s1_0.updated_at,
+        s1_0.url 
+    from
+        sites s1_0 
+    left join
+        site_tag_links t1_0 
+            on s1_0.id=t1_0.site_id 
+    left join
+        tags t1_1 
+            on t1_1.id=t1_0.tag_id 
+    left join
+        categories c1_0 
+            on c1_0.id=s1_0.category_id 
+    where
+        s1_0.id in (?) 
+    order by
+        s1_0.id
+Hibernate: 
+    select
+        distinct s1_0.id,
+        c1_0.id,
+        c1_0.created_at,
+        c1_0.description,
+        c1_0.name,
+        c1_0.updated_at,
+        s1_0.category_id,
+        s1_0.created_at,
+        s1_0.description,
+        s1_0.is_active,
+        s1_0.name,
+        s1_0.sort_order,
+        t1_0.site_id,
+        t1_1.id,
+        t1_1.color,
+        t1_1.created_at,
+        t1_1.name,
+        t1_1.updated_at,
+        s1_0.updated_at,
+        s1_0.url 
+    from
+        sites s1_0 
+    left join
+        site_tag_links t1_0 
+            on s1_0.id=t1_0.site_id 
+    left join
+        tags t1_1 
+            on t1_1.id=t1_0.tag_id 
+    left join
+        categories c1_0 
+            on c1_0.id=s1_0.category_id 
+    where
+        s1_0.id in (?) 
+    order by
+        s1_0.id
+2026-03-21T01:26:43.093+08:00 DEBUG 37868 --- [   automation-1] org.hibernate.SQL                        : 
+    insert 
+    into
+        checkin_history
+        (created_at, duration_ms, error_message, error_types, finished_at, flow_id, log, result_payload, screenshot_files, started_at, status, updated_at) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        checkin_history
+        (created_at, duration_ms, error_message, error_types, finished_at, flow_id, log, result_payload, screenshot_files, started_at, status, updated_at) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-03-21T01:26:43.106+08:00  INFO 37868 --- [   automation-1] c.r.e.p.ExecutionCompletionService       : Saved history for flow 3 with status success
+2026-03-21T01:26:43.107+08:00 DEBUG 37868 --- [   automation-1] org.hibernate.SQL                        : 
+    select
+        af1_0.id,
+        af1_0.browser_path,
+        af1_0.browser_type,
+        af1_0.cdp_port,
+        af1_0.cdp_user_data_dir,
+        af1_0.created_at,
+        af1_0.cron_expression,
+        af1_0.description,
+        af1_0.dsl,
+        af1_0.headless,
+        af1_0.is_active,
+        af1_0.last_status,
+        af1_0.name,
+        af1_0.proxy_id,
+        af1_0.site_id,
+        af1_0.updated_at,
+        af1_0.use_cdp_mode,
+        af1_0.use_proxy 
+    from
+        automation_flows af1_0 
+    where
+        af1_0.id=?
+Hibernate: 
+    select
+        af1_0.id,
+        af1_0.browser_path,
+        af1_0.browser_type,
+        af1_0.cdp_port,
+        af1_0.cdp_user_data_dir,
+        af1_0.created_at,
+        af1_0.cron_expression,
+        af1_0.description,
+        af1_0.dsl,
+        af1_0.headless,
+        af1_0.is_active,
+        af1_0.last_status,
+        af1_0.name,
+        af1_0.proxy_id,
+        af1_0.site_id,
+        af1_0.updated_at,
+        af1_0.use_cdp_mode,
+        af1_0.use_proxy 
+    from
+        automation_flows af1_0 
+    where
+        af1_0.id=?
+2026-03-21T01:26:43.108+08:00 DEBUG 37868 --- [   automation-1] org.hibernate.SQL                        : 
+    select
+        af1_0.id,
+        af1_0.browser_path,
+        af1_0.browser_type,
+        af1_0.cdp_port,
+        af1_0.cdp_user_data_dir,
+        af1_0.created_at,
+        af1_0.cron_expression,
+        af1_0.description,
+        af1_0.dsl,
+        af1_0.headless,
+        af1_0.is_active,
+        af1_0.last_status,
+        af1_0.name,
+        af1_0.proxy_id,
+        af1_0.site_id,
+        af1_0.updated_at,
+        af1_0.use_cdp_mode,
+        af1_0.use_proxy 
+    from
+        automation_flows af1_0 
+    where
+        af1_0.id=?
+Hibernate: 
+    select
+        af1_0.id,
+        af1_0.browser_path,
+        af1_0.browser_type,
+        af1_0.cdp_port,
+        af1_0.cdp_user_data_dir,
+        af1_0.created_at,
+        af1_0.cron_expression,
+        af1_0.description,
+        af1_0.dsl,
+        af1_0.headless,
+        af1_0.is_active,
+        af1_0.last_status,
+        af1_0.name,
+        af1_0.proxy_id,
+        af1_0.site_id,
+        af1_0.updated_at,
+        af1_0.use_cdp_mode,
+        af1_0.use_proxy 
+    from
+        automation_flows af1_0 
+    where
+        af1_0.id=?
+2026-03-21T01:26:43.109+08:00 DEBUG 37868 --- [   automation-1] org.hibernate.SQL                        : 
+    update
+        automation_flows 
+    set
+        browser_path=?,
+        browser_type=?,
+        cdp_port=?,
+        cdp_user_data_dir=?,
+        cron_expression=?,
+        description=?,
+        dsl=?,
+        headless=?,
+        is_active=?,
+        last_status=?,
+        name=?,
+        proxy_id=?,
+        site_id=?,
+        updated_at=?,
+        use_cdp_mode=?,
+        use_proxy=? 
+    where
+        id=?
+Hibernate: 
+    update
+        automation_flows 
+    set
+        browser_path=?,
+        browser_type=?,
+        cdp_port=?,
+        cdp_user_data_dir=?,
+        cron_expression=?,
+        description=?,
+        dsl=?,
+        headless=?,
+        is_active=?,
+        last_status=?,
+        name=?,
+        proxy_id=?,
+        site_id=?,
+        updated_at=?,
+        use_cdp_mode=?,
+        use_proxy=? 
+    where
+        id=?

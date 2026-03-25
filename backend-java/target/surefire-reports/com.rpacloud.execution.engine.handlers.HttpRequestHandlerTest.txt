@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.rpacloud.execution.engine.handlers.HttpRequestHandlerTest
+-------------------------------------------------------------------------------
+Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.972 s -- in com.rpacloud.execution.engine.handlers.HttpRequestHandlerTest

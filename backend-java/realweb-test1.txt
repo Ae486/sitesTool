@@ -1,0 +1,48 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] -----------------------< com.rpacloud:rpa-cloud >-----------------------
+[INFO] Building RPA Cloud 0.1.0-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ rpa-cloud ---
+[INFO] Copying 2 resources from src\main\resources to target\classes
+[INFO] Copying 6 resources from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ rpa-cloud ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ rpa-cloud ---
+[INFO] Copying 6 resources from src\test\resources to target\test-classes
+[INFO] 
+[INFO] --- compiler:3.13.0:testCompile (default-testCompile) @ rpa-cloud ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- failsafe:3.2.5:integration-test (default-cli) @ rpa-cloud ---
+[INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+[INFO] 
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running com.rpacloud.integration.playwright.LlmAgentRealWebIT
+23:44:53.358 [main] INFO com.rpacloud.execution.engine.handlers.LlmAgentHandler -- Fetching internal LLM credential from http://127.0.0.1:2437/internal/llm/credential
+23:45:03.675 [main] INFO com.rpacloud.execution.engine.handlers.LlmAgentHandler -- LLM agent iteration 1/10, hasToolCalls=true, stepTokens=720, totalTokensUsed=720
+23:45:31.406 [main] INFO com.rpacloud.execution.engine.handlers.LlmAgentHandler -- LLM agent iteration 2/10, hasToolCalls=true, stepTokens=611, totalTokensUsed=1331
+23:45:33.323 [main] INFO com.rpacloud.execution.engine.handlers.LlmAgentHandler -- LLM agent iteration 3/10, hasToolCalls=true, stepTokens=574, totalTokensUsed=1905
+23:45:35.610 [main] INFO com.rpacloud.execution.engine.handlers.LlmAgentHandler -- LLM agent iteration 4/10, hasToolCalls=false, stepTokens=728, totalTokensUsed=2633
+23:45:35.611 [main] INFO com.rpacloud.execution.engine.handlers.LlmAgentHandler -- LLM agent completed in 4 iteration(s), model=gemini-2.5-flash, totalTokensUsed=2633
+[RealWeb-Quote] Message: The first quote is: ¡°The world as we have created it is a process of our thinking. It cannot be changed without changing our thinking.¡±
+The author of the first quote is: Albert Einstein
+[RealWeb-Quote] Tokens: 2633
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 51.85 s -- in com.rpacloud.integration.playwright.LlmAgentRealWebIT
+[INFO] 
+[INFO] Results:
+[INFO] 
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0
+[INFO] 
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  59.214 s
+[INFO] Finished at: 2026-02-19T23:45:36+08:00
+[INFO] ------------------------------------------------------------------------

@@ -16,6 +16,8 @@ export interface AutomationFlow {
   use_cdp_mode: boolean;
   cdp_port: number;
   cdp_user_data_dir?: string | null;
+  use_proxy: boolean;
+  proxy_id?: number | null;
   dsl: FlowDSL;
   last_status: string;
   created_at: string;

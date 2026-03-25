@@ -112,6 +112,21 @@ class InternalLlmControllerTest {
     }
 
     @Test
+    void chatMaxTokensZeroFloorAtOne() {
+        when(tokenProvider.validateAndParse("valid-token")).thenReturn(makeClaims(1L, "exec-1"));
+        when(rateLimiter.tryAcquire(anyString(), anyInt())).thenReturn(true);
+        doNothing().when(accountService).freeze(anyLong(), anyString(), anyLong());
+        when(llmGatewayService.chat(any())).thenReturn(new LlmChatResponse("ok", 10L, "model"));
+
+        InternalLlmRequest req = makeRequest("valid-token", "Hello");
+        req.setMaxTokens(0);
+        controller.chat(req);
+
+        // freeze should be called with 1 (floor), not 0
+        verify(accountService).freeze(eq(1L), anyString(), eq(1L));
+    }
+
+    @Test
     void chatRejectsWhenRateLimited() {
         when(tokenProvider.validateAndParse("valid-token")).thenReturn(makeClaims(1L, "exec-1"));
         when(rateLimiter.tryAcquire(anyString(), anyInt())).thenReturn(false);
@@ -119,5 +134,49 @@ class InternalLlmControllerTest {
         assertThatThrownBy(() -> controller.chat(makeRequest("valid-token", "Hello")))
                 .isInstanceOf(BizException.class)
                 .satisfies(ex -> assertThat(((BizException) ex).getErrorCode()).isEqualTo(ErrorCode.LLM_QUOTA_EXCEEDED));
+    }
+
+    // --- credential endpoint tests ---
+
+    @Test
+    void credentialSuccess() {
+        when(tokenProvider.validateAndParse("valid-token")).thenReturn(makeClaims(1L, "exec-1"));
+
+        // Use reflection to set @Value fields since no Spring context
+        setField(controller, "llmApiKey", "sk-test");
+        setField(controller, "llmBaseUrl", "https://api.example.com");
+        setField(controller, "llmDefaultModel", "gpt-4o");
+
+        Map<String, String> result = controller.credential(Map.of("internal_token", "valid-token"));
+
+        assertThat(result).containsEntry("api_key", "sk-test");
+        assertThat(result).containsEntry("base_url", "https://api.example.com");
+        assertThat(result).containsEntry("model", "gpt-4o");
+    }
+
+    @Test
+    void credentialRejectsInvalidToken() {
+        when(tokenProvider.validateAndParse("bad-token")).thenReturn(null);
+
+        assertThatThrownBy(() -> controller.credential(Map.of("internal_token", "bad-token")))
+                .isInstanceOf(BizException.class)
+                .satisfies(ex -> assertThat(((BizException) ex).getErrorCode()).isEqualTo(ErrorCode.INVALID_INTERNAL_TOKEN));
+    }
+
+    @Test
+    void credentialRejectsMissingToken() {
+        assertThatThrownBy(() -> controller.credential(Map.of()))
+                .isInstanceOf(BizException.class)
+                .satisfies(ex -> assertThat(((BizException) ex).getErrorCode()).isEqualTo(ErrorCode.INVALID_INTERNAL_TOKEN));
+    }
+
+    private static void setField(Object target, String fieldName, Object value) {
+        try {
+            var field = target.getClass().getDeclaredField(fieldName);
+            field.setAccessible(true);
+            field.set(target, value);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to set field " + fieldName, e);
+        }
     }
 }

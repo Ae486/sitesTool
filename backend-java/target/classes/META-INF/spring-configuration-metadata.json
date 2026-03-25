@@ -24,16 +24,39 @@
       "sourceMethod": "getExecution()"
     },
     {
+      "name": "rpa.geo-ip",
+      "type": "com.rpacloud.common.config.RpaProperties$GeoIp",
+      "sourceType": "com.rpacloud.common.config.RpaProperties",
+      "sourceMethod": "getGeoIp()"
+    },
+    {
       "name": "rpa.llm",
       "type": "com.rpacloud.common.config.RpaProperties$Llm",
       "sourceType": "com.rpacloud.common.config.RpaProperties",
       "sourceMethod": "getLlm()"
     },
     {
+      "name": "rpa.notification",
+      "type": "com.rpacloud.notification.NotificationProperties",
+      "sourceType": "com.rpacloud.notification.NotificationProperties"
+    },
+    {
       "name": "rpa.proxy",
       "type": "com.rpacloud.common.config.RpaProperties$Proxy",
       "sourceType": "com.rpacloud.common.config.RpaProperties",
       "sourceMethod": "getProxy()"
+    },
+    {
+      "name": "rpa.storage",
+      "type": "com.rpacloud.common.config.RpaProperties$Storage",
+      "sourceType": "com.rpacloud.common.config.RpaProperties",
+      "sourceMethod": "getStorage()"
+    },
+    {
+      "name": "rpa.worker-pool",
+      "type": "com.rpacloud.common.config.RpaProperties$WorkerPool",
+      "sourceType": "com.rpacloud.common.config.RpaProperties",
+      "sourceMethod": "getWorkerPool()"
     }
   ],
   "properties": [
@@ -86,6 +109,12 @@
       "defaultValue": 8
     },
     {
+      "name": "rpa.geo-ip.base-url",
+      "type": "java.lang.String",
+      "sourceType": "com.rpacloud.common.config.RpaProperties$GeoIp",
+      "defaultValue": "http:\/\/ip-api.com"
+    },
+    {
       "name": "rpa.llm.default-rpm",
       "type": "java.lang.Integer",
       "sourceType": "com.rpacloud.common.config.RpaProperties$Llm",
@@ -104,6 +133,18 @@
       "defaultValue": 2000
     },
     {
+      "name": "rpa.notification.email-enabled",
+      "type": "java.lang.Boolean",
+      "sourceType": "com.rpacloud.notification.NotificationProperties",
+      "defaultValue": false
+    },
+    {
+      "name": "rpa.notification.email-from",
+      "type": "java.lang.String",
+      "sourceType": "com.rpacloud.notification.NotificationProperties",
+      "defaultValue": "noreply@example.com"
+    },
+    {
       "name": "rpa.proxy.cooldown-seconds",
       "type": "java.lang.Integer",
       "sourceType": "com.rpacloud.common.config.RpaProperties$Proxy",
@@ -116,16 +157,106 @@
       "defaultValue": 300000
     },
     {
+      "name": "rpa.proxy.health-check-url",
+      "type": "java.lang.String",
+      "sourceType": "com.rpacloud.common.config.RpaProperties$Proxy",
+      "defaultValue": "http:\/\/myip.ipip.net"
+    },
+    {
+      "name": "rpa.proxy.health-check-url-fallback",
+      "type": "java.lang.String",
+      "sourceType": "com.rpacloud.common.config.RpaProperties$Proxy",
+      "defaultValue": "http:\/\/api.ipify.org"
+    },
+    {
       "name": "rpa.proxy.max-concurrent-checks",
       "type": "java.lang.Integer",
       "sourceType": "com.rpacloud.common.config.RpaProperties$Proxy",
       "defaultValue": 10
     },
     {
+      "name": "rpa.proxy.proxy-acquire-timeout-ms",
+      "type": "java.lang.Long",
+      "sourceType": "com.rpacloud.common.config.RpaProperties$Proxy",
+      "defaultValue": 30000
+    },
+    {
+      "name": "rpa.proxy.proxy-max-lease-ms",
+      "type": "java.lang.Long",
+      "sourceType": "com.rpacloud.common.config.RpaProperties$Proxy",
+      "defaultValue": 360000
+    },
+    {
       "name": "rpa.proxy.proxy-provider-url",
       "type": "java.lang.String",
       "sourceType": "com.rpacloud.common.config.RpaProperties$Proxy",
       "defaultValue": "https:\/\/proxy.scdn.io\/api\/get_proxy.php"
+    },
+    {
+      "name": "rpa.storage.base-path",
+      "type": "java.lang.String",
+      "sourceType": "com.rpacloud.common.config.RpaProperties$Storage",
+      "defaultValue": "data\/storage"
+    },
+    {
+      "name": "rpa.storage.max-file-size-bytes",
+      "type": "java.lang.Long",
+      "sourceType": "com.rpacloud.common.config.RpaProperties$Storage",
+      "defaultValue": 0
+    },
+    {
+      "name": "rpa.storage.screenshot-retention-days",
+      "type": "java.lang.Integer",
+      "sourceType": "com.rpacloud.common.config.RpaProperties$Storage",
+      "defaultValue": 7
+    },
+    {
+      "name": "rpa.storage.user-quota-bytes",
+      "type": "java.lang.Long",
+      "sourceType": "com.rpacloud.common.config.RpaProperties$Storage",
+      "defaultValue": 0
+    },
+    {
+      "name": "rpa.worker-pool.acquire-timeout-ms",
+      "type": "java.lang.Long",
+      "sourceType": "com.rpacloud.common.config.RpaProperties$WorkerPool",
+      "defaultValue": 30000
+    },
+    {
+      "name": "rpa.worker-pool.enabled",
+      "type": "java.lang.Boolean",
+      "sourceType": "com.rpacloud.common.config.RpaProperties$WorkerPool",
+      "defaultValue": false
+    },
+    {
+      "name": "rpa.worker-pool.global-max-active",
+      "type": "java.lang.Integer",
+      "sourceType": "com.rpacloud.common.config.RpaProperties$WorkerPool",
+      "defaultValue": 8
+    },
+    {
+      "name": "rpa.worker-pool.max-active-per-key",
+      "type": "java.lang.Integer",
+      "sourceType": "com.rpacloud.common.config.RpaProperties$WorkerPool",
+      "defaultValue": 4
+    },
+    {
+      "name": "rpa.worker-pool.max-idle-minutes",
+      "type": "java.lang.Integer",
+      "sourceType": "com.rpacloud.common.config.RpaProperties$WorkerPool",
+      "defaultValue": 10
+    },
+    {
+      "name": "rpa.worker-pool.max-lifetime-minutes",
+      "type": "java.lang.Integer",
+      "sourceType": "com.rpacloud.common.config.RpaProperties$WorkerPool",
+      "defaultValue": 60
+    },
+    {
+      "name": "rpa.worker-pool.max-tasks-per-worker",
+      "type": "java.lang.Integer",
+      "sourceType": "com.rpacloud.common.config.RpaProperties$WorkerPool",
+      "defaultValue": 100
     }
   ],
   "hints": []

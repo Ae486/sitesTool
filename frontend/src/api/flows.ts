@@ -48,3 +48,19 @@ export const getRunningFlows = async (): Promise<{ running_flows: number[] }> =>
   const { data } = await api.get<{ running_flows: number[] }>("/flows/running/list");
   return data;
 };
+
+export const exportFlow = async (flowId: number): Promise<Blob> => {
+  const { data } = await api.get(`/flows/${flowId}/export`, {
+    responseType: "blob",
+  });
+  return data;
+};
+
+export const importFlow = async (file: File): Promise<AutomationFlow> => {
+  const formData = new FormData();
+  formData.append("file", file);
+  const { data } = await api.post<AutomationFlow>("/flows/import", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return data;
+};

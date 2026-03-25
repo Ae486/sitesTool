@@ -12,6 +12,8 @@ public class HandlerResult {
     @Builder.Default
     Map<String, Object> extractedData = Map.of();
     String screenshotPath;
+    @Builder.Default
+    long totalTokensUsed = 0;
 
     public static HandlerResult of(String message) {
         return HandlerResult.builder().message(message).build();

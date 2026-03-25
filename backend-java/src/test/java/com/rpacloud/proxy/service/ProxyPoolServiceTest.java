@@ -22,6 +22,7 @@ import com.rpacloud.proxy.dto.ProxyResponse;
 import com.rpacloud.proxy.entity.Proxy;
 import com.rpacloud.proxy.provider.ProxyProviderAdapter;
 import com.rpacloud.proxy.provider.ProxyProviderAdapter.ProxyInfo;
+import com.rpacloud.proxy.repository.ProxyHealthLogRepository;
 import com.rpacloud.proxy.repository.ProxyRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -37,6 +38,7 @@ import org.springframework.data.redis.core.ZSetOperations;
 class ProxyPoolServiceTest {
 
     @Mock private ProxyRepository proxyRepository;
+    @Mock private ProxyHealthLogRepository proxyHealthLogRepository;
     @Mock private ProxyProviderAdapter providerAdapter;
     @Mock private StringRedisTemplate stringRedisTemplate;
     @Mock private ZSetOperations<String, String> zSetOps;
@@ -55,6 +57,7 @@ class ProxyPoolServiceTest {
 
         proxyPoolService = new ProxyPoolService(
                 proxyRepository,
+                proxyHealthLogRepository,
                 List.of(providerAdapter),
                 stringRedisTemplate,
                 rpaProperties
@@ -128,11 +131,12 @@ class ProxyPoolServiceTest {
         when(proxyRepository.findById(1L)).thenReturn(Optional.of(proxy));
         when(proxyRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        proxyPoolService.updateScore(1L, true, 200);
+        proxyPoolService.updateScore(1L, true, 200, null, null);
 
         assertThat(proxy.getSuccessCount()).isEqualTo(5);
         // avgLatency = (100*4 + 200) / 5 = 120
         assertThat(proxy.getAvgLatencyMs()).isEqualTo(120);
+        assertThat(proxy.getLastCheckSuccess()).isTrue();
         verify(proxyRepository).save(proxy);
         verify(zSetOps).add(eq("proxy:pool"), eq("1"), anyDouble());
     }
@@ -145,16 +149,17 @@ class ProxyPoolServiceTest {
         when(proxyRepository.findById(1L)).thenReturn(Optional.of(proxy));
         when(proxyRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        proxyPoolService.updateScore(1L, false, 0);
+        proxyPoolService.updateScore(1L, false, 0, null, null);
 
         assertThat(proxy.getFailCount()).isEqualTo(2);
         assertThat(proxy.getSuccessCount()).isEqualTo(3); // unchanged
+        assertThat(proxy.getLastCheckSuccess()).isFalse();
     }
 
     @Test
     void updateScore_notFound_throwsBizException() {
         when(proxyRepository.findById(999L)).thenReturn(Optional.empty());
-        assertThatThrownBy(() -> proxyPoolService.updateScore(999L, true, 100))
+        assertThatThrownBy(() -> proxyPoolService.updateScore(999L, true, 100, null, null))
                 .isInstanceOf(BizException.class);
     }
 
@@ -229,7 +234,7 @@ class ProxyPoolServiceTest {
         when(proxyRepository.findById(1L)).thenReturn(Optional.of(proxy));
         when(proxyRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        proxyPoolService.updateScore(1L, true, 0);
+        proxyPoolService.updateScore(1L, true, 0, null, null);
 
         ArgumentCaptor<Double> scoreCaptor = ArgumentCaptor.forClass(Double.class);
         verify(zSetOps).add(eq("proxy:pool"), eq("1"), scoreCaptor.capture());
@@ -246,9 +251,134 @@ class ProxyPoolServiceTest {
         when(proxyRepository.findById(1L)).thenReturn(Optional.of(proxy));
         when(proxyRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        proxyPoolService.updateScore(1L, false, 0);
+        proxyPoolService.updateScore(1L, false, 0, null, null);
 
         verify(zSetOps).remove("proxy:pool", "1");
         verify(zSetOps, never()).add(anyString(), anyString(), anyDouble());
+    }
+
+    // ── addProxy ──────────────────────────────────────────────
+
+    @Test
+    void addProxy_setsProviderToManual() {
+        when(proxyRepository.findByIpAndPort("1.2.3.4", 8080)).thenReturn(Optional.empty());
+        when(proxyRepository.save(any())).thenAnswer(inv -> {
+            Proxy p = inv.getArgument(0);
+            p.setId(1L);
+            return p;
+        });
+
+        proxyPoolService.addProxy("1.2.3.4", 8080, "HTTP", null);
+
+        ArgumentCaptor<Proxy> captor = ArgumentCaptor.forClass(Proxy.class);
+        verify(proxyRepository).save(captor.capture());
+        assertThat(captor.getValue().getProvider()).isEqualTo("manual");
+    }
+
+    // ── refreshPool (skip manual) ─────────────────────────────
+
+    @Test
+    void refreshPool_skipsManualProxies() {
+        Proxy manualProxy = Proxy.builder().id(1L).ip("10.0.0.1").port(3128)
+                .protocol("HTTP").provider("manual").isActive(true).build();
+        when(providerAdapter.fetch("HTTP", 1, null))
+                .thenReturn(List.of(new ProxyInfo("10.0.0.1", 3128, "HTTP")));
+        when(proxyRepository.findByIpAndPort("10.0.0.1", 3128))
+                .thenReturn(Optional.of(manualProxy));
+
+        proxyPoolService.refreshPool("http", 1);
+
+        verify(proxyRepository, never()).save(any());
+    }
+
+    // ── batchImport ───────────────────────────────────────────
+
+    @Test
+    void batchImport_parsesIpPortLines() {
+        when(proxyRepository.findByIpAndPort(anyString(), any()))
+                .thenReturn(Optional.empty());
+        when(proxyRepository.save(any())).thenAnswer(inv -> {
+            Proxy p = inv.getArgument(0);
+            p.setId(1L);
+            return p;
+        });
+
+        ProxyPoolService.BatchImportResult result = proxyPoolService.batchImport(
+                List.of("10.0.0.1:3128", "10.0.0.2:8080:HTTP:CN"), "myProvider");
+
+        assertThat(result.imported()).isEqualTo(2);
+        assertThat(result.skipped()).isEqualTo(0);
+        assertThat(result.importedIds()).hasSize(2);
+    }
+
+    @Test
+    void batchImport_withoutProtocol_storesNull() {
+        when(proxyRepository.findByIpAndPort(anyString(), any()))
+                .thenReturn(Optional.empty());
+        when(proxyRepository.save(any())).thenAnswer(inv -> {
+            Proxy p = inv.getArgument(0);
+            p.setId(1L);
+            return p;
+        });
+
+        proxyPoolService.batchImport(List.of("10.0.0.1:3128"), "test");
+
+        ArgumentCaptor<Proxy> captor = ArgumentCaptor.forClass(Proxy.class);
+        verify(proxyRepository).save(captor.capture());
+        assertThat(captor.getValue().getProtocol()).isNull();
+    }
+
+    @Test
+    void batchImport_withProtocol_normalizesAndStores() {
+        when(proxyRepository.findByIpAndPort(anyString(), any()))
+                .thenReturn(Optional.empty());
+        when(proxyRepository.save(any())).thenAnswer(inv -> {
+            Proxy p = inv.getArgument(0);
+            p.setId(1L);
+            return p;
+        });
+
+        proxyPoolService.batchImport(List.of("10.0.0.1:3128:socks5:US"), "test");
+
+        ArgumentCaptor<Proxy> captor = ArgumentCaptor.forClass(Proxy.class);
+        verify(proxyRepository).save(captor.capture());
+        assertThat(captor.getValue().getProtocol()).isEqualTo("SOCKS5");
+        assertThat(captor.getValue().getRegion()).isEqualTo("US");
+    }
+
+    @Test
+    void batchImport_skipsInvalidLines() {
+        ProxyPoolService.BatchImportResult result = proxyPoolService.batchImport(
+                List.of("", "notanip", "10.0.0.1:notaport", "10.0.0.1:99999"), "test");
+
+        assertThat(result.imported()).isEqualTo(0);
+        assertThat(result.skipped()).isEqualTo(4);
+        verify(proxyRepository, never()).save(any());
+    }
+
+    @Test
+    void batchImport_setsProvider() {
+        when(proxyRepository.findByIpAndPort(anyString(), any()))
+                .thenReturn(Optional.empty());
+        when(proxyRepository.save(any())).thenAnswer(inv -> {
+            Proxy p = inv.getArgument(0);
+            p.setId(1L);
+            return p;
+        });
+
+        proxyPoolService.batchImport(List.of("1.2.3.4:1080"), "myApi");
+
+        ArgumentCaptor<Proxy> captor = ArgumentCaptor.forClass(Proxy.class);
+        verify(proxyRepository).save(captor.capture());
+        assertThat(captor.getValue().getProvider()).isEqualTo("myApi");
+    }
+
+    // ── getProxyHealthLogs ────────────────────────────────────
+
+    @Test
+    void getProxyHealthLogs_proxyNotFound_throwsBizException() {
+        when(proxyRepository.existsById(999L)).thenReturn(false);
+        assertThatThrownBy(() -> proxyPoolService.getProxyHealthLogs(999L, 0, 10))
+                .isInstanceOf(BizException.class);
     }
 }

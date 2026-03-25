@@ -37,9 +37,8 @@ public class Proxy {
     @Column(nullable = false)
     private Integer port;
 
-    @Column(nullable = false, length = 10)
-    @Builder.Default
-    private String protocol = "HTTP";
+    @Column(length = 10)
+    private String protocol;
 
     @Column(length = 50)
     private String region;
@@ -62,6 +61,9 @@ public class Proxy {
     @Column(name = "avg_latency_ms", nullable = false)
     @Builder.Default
     private Integer avgLatencyMs = 0;
+
+    @Column(name = "last_check_success")
+    private Boolean lastCheckSuccess;
 
     @Column(name = "last_checked_at")
     private LocalDateTime lastCheckedAt;

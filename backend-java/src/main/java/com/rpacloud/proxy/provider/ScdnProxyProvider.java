@@ -10,7 +10,6 @@ import com.rpacloud.proxy.provider.ProxyProviderAdapter.ProxyInfo;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.web.client.RestTemplateBuilder;
-import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
@@ -18,7 +17,6 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 @Slf4j
 @Component
-@Profile("enterprise")
 @RequiredArgsConstructor
 public class ScdnProxyProvider implements ProxyProviderAdapter {
 

@@ -39,6 +39,9 @@ public enum StepType {
     CAPTURE_NETWORK("capture_network"),
     WAIT_FOR_NETWORK("wait_for_network"),
     LLM_CALL("llm_call"),
+    HTTP_REQUEST("http_request"),
+    SEND_NOTIFICATION("send_notification"),
+    LLM_AGENT("llm_agent"),
     ;
 
     private final String value;

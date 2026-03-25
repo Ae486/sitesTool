@@ -32,11 +32,12 @@ public class RunAutomation {
             PlaywrightExecutor executor = new PlaywrightExecutor(
                     parsed.headless, parsed.browser, parsed.browserPath,
                     Path.of("data/screenshots"), parsed.proxyUrl,
-                    parsed.internalApiUrl, parsed.internalToken);
+                    parsed.internalApiUrl, parsed.internalToken,
+                    parsed.useCdpMode, parsed.cdpPort, parsed.cdpUserDataDir);
 
             PlaywrightExecutor.ExecutionResult result = executor.execute(parsed.flowId, steps);
 
-            Map<String, Object> output = buildOutput(result, parsed.executionId);
+            Map<String, Object> output = buildOutputMap(result, parsed.executionId);
             System.out.println(new ObjectMapper().writeValueAsString(output));
 
         } catch (Exception e) {
@@ -54,7 +55,8 @@ public class RunAutomation {
         }
     }
 
-    private static Map<String, Object> buildOutput(PlaywrightExecutor.ExecutionResult result, String executionId) {
+    /** Build output map from execution result. Public for WorkerRunAutomation reuse. */
+    public static Map<String, Object> buildOutputMap(PlaywrightExecutor.ExecutionResult result, String executionId) {
         List<Map<String, Object>> stepResults = new ArrayList<>();
         for (var sr : result.getStepResults()) {
             Map<String, Object> m = new HashMap<>();
@@ -69,15 +71,18 @@ public class RunAutomation {
             if (sr.getDescription() != null) m.put("description", sr.getDescription());
             stepResults.add(m);
         }
-        return Map.of(
-                "execution_id", executionId,
-                "status", result.getStatus(),
-                "steps_executed", result.getStepsExecuted(),
-                "steps_failed", result.getStepsFailed(),
-                "total_duration_ms", result.getTotalDurationMs(),
-                "message", "Executed " + result.getStepsExecuted() + " steps, " + result.getStepsFailed() + " failed",
-                "step_results", stepResults
-        );
+        Map<String, Object> output = new HashMap<>();
+        output.put("execution_id", executionId);
+        output.put("status", result.getStatus());
+        output.put("steps_executed", result.getStepsExecuted());
+        output.put("steps_failed", result.getStepsFailed());
+        output.put("total_duration_ms", result.getTotalDurationMs());
+        output.put("message", "Executed " + result.getStepsExecuted() + " steps, " + result.getStepsFailed() + " failed");
+        output.put("step_results", stepResults);
+        if (result.getTotalTokensUsed() > 0) {
+            output.put("total_tokens_used", result.getTotalTokensUsed());
+        }
+        return output;
     }
 
     static Args parseArgs(String[] args) {
@@ -92,6 +97,9 @@ public class RunAutomation {
         String internalApiUrl = null;
         String internalToken = null;
         boolean readStdin = false;
+        boolean useCdpMode = false;
+        int cdpPort = 9222;
+        String cdpUserDataDir = null;
 
         // Check if args[1] is --dsl-stdin flag
         if ("--dsl-stdin".equals(dslJson)) {
@@ -109,6 +117,9 @@ public class RunAutomation {
                 case "--proxy" -> { if (i + 1 < args.length) proxyUrl = args[++i]; }
                 case "--internal-api-url" -> { if (i + 1 < args.length) internalApiUrl = args[++i]; }
                 case "--internal-token" -> { if (i + 1 < args.length) internalToken = args[++i]; }
+                case "--use-cdp-mode" -> useCdpMode = true;
+                case "--cdp-port" -> { if (i + 1 < args.length) cdpPort = Integer.parseInt(args[++i]); }
+                case "--cdp-user-data-dir" -> { if (i + 1 < args.length) cdpUserDataDir = args[++i]; }
                 case "--dsl-stdin" -> readStdin = true;
             }
         }
@@ -125,7 +136,8 @@ public class RunAutomation {
             throw new IllegalArgumentException("DSL JSON is empty");
         }
 
-        return new Args(flowId, dslJson, headless, browser, browserPath, executionId, proxyUrl, internalApiUrl, internalToken);
+        return new Args(flowId, dslJson, headless, browser, browserPath, executionId, proxyUrl, internalApiUrl, internalToken,
+                useCdpMode, cdpPort, cdpUserDataDir);
     }
 
     private static String extractExecutionId(String[] args) {
@@ -136,5 +148,6 @@ public class RunAutomation {
     }
 
     record Args(long flowId, String dslJson, boolean headless, String browser, String browserPath,
-                String executionId, String proxyUrl, String internalApiUrl, String internalToken) {}
+                String executionId, String proxyUrl, String internalApiUrl, String internalToken,
+                boolean useCdpMode, int cdpPort, String cdpUserDataDir) {}
 }
